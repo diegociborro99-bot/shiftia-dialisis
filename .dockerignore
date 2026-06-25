@@ -1,0 +1,11 @@
+extension/
+ui/
+app.py
+iniciar.command
+LEEME.md
+*.db
+**/__pycache__/
+**/*.pyc
+.git/
+analyze copy*
+test_*.py

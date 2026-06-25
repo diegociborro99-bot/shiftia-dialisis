@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shiftia · Diálisis</title>
+<style>
+:root{
+  --primary:#2980b9; --primary-light:rgba(41,128,185,.08);
+  --accent:#4ecdc4; --gradient:linear-gradient(135deg,#4ecdc4,#2980b9);
+  --bg:#fafafa; --bg-card:#fff;
+  --text1:#0f0f0f; --text2:#444; --text3:#888;
+  --border:#e8e8e8; --border-light:#f0f0f0;
+  --success:#10b981; --success-bg:#ecfdf5;
+  --warning:#f59e0b; --warning-bg:#fffbeb;
+  --error:#ef4444; --error-bg:#fef2f2;
+  --radius-sm:8px; --radius-md:12px; --radius-pill:999px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 12px rgba(0,0,0,.06),0 1px 3px rgba(0,0,0,.04);
+  --shadow-lg:0 8px 30px rgba(0,0,0,.08),0 2px 8px rgba(0,0,0,.04);
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --ease-out:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text1);font-size:14px;line-height:1.5;padding:12px}
+header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.mark{width:32px;height:32px;border-radius:9px;background:var(--gradient);display:grid;place-items:center;box-shadow:var(--shadow-md);flex-shrink:0}
+.mark svg{width:18px;height:18px}
+.brand h1{font-size:.98rem;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.brand p{font-size:.72rem;color:var(--text3);font-weight:500}
+.status{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:.7rem;font-weight:600;color:var(--text3)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--text3)}
+.dot.up{background:var(--success)} .dot.down{background:var(--error)}
+.logout{background:none;border:none;cursor:pointer;color:var(--text3);font-size:1rem;padding:2px 5px;border-radius:6px;line-height:1}
+.logout:hover{background:var(--error-bg);color:var(--error)}
+
+.drop{background:var(--bg-card);border:2px dashed var(--border);border-radius:14px;padding:26px 16px;text-align:center;cursor:pointer;transition:all .2s var(--ease-out);box-shadow:var(--shadow-sm)}
+.drop:hover,.drop.over{border-color:var(--primary);background:var(--primary-light)}
+.drop .ico{width:44px;height:44px;border-radius:12px;background:var(--primary-light);display:grid;place-items:center;margin:0 auto 12px;color:var(--primary)}
+.drop h2{font-size:.95rem;font-weight:600;margin-bottom:5px}
+.drop p{color:var(--text3);font-size:.8rem}
+.drop input{display:none}
+
+.card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);margin-bottom:12px}
+.card h3{font-size:.85rem;font-weight:600;padding:11px 14px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:7px}
+.banner{display:flex;align-items:center;gap:12px;padding:14px;border-radius:var(--radius-md);margin-bottom:12px;box-shadow:var(--shadow-sm)}
+.banner.ok{background:var(--success-bg);border:1px solid #a7f3d0}
+.banner.bad{background:var(--error-bg);border:1px solid #fecaca}
+.banner .big{font-size:1.05rem;font-weight:800;letter-spacing:-.02em}
+.banner.ok .big{color:var(--success)} .banner.bad .big{color:var(--error)}
+.banner .sub{font-size:.74rem;color:var(--text2)}
+.banner .badge{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;color:#fff}
+.banner.ok .badge{background:var(--success)} .banner.bad .badge{background:var(--error)}
+.checks{list-style:none;padding:8px 14px 12px}
+.checks li{display:flex;gap:8px;padding:6px 0;font-size:.8rem;border-bottom:1px solid var(--border-light)}
+.checks li:last-child{border-bottom:0}
+.checks .ck{font-weight:700;flex-shrink:0}
+.checks .ok{color:var(--success)} .checks .bad{color:var(--error)}
+.checks .cite{color:var(--text3);font-size:.7rem}
+.checks .iss{color:var(--error);font-size:.72rem;margin-top:2px}
+
+.toolbar{display:flex;gap:8px;margin-bottom:12px}
+.btn{flex:1;padding:9px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);font-family:inherit;font-size:.78rem;font-weight:600;cursor:pointer;color:var(--text2);transition:all .15s}
+.btn:hover{border-color:var(--primary);color:var(--primary)}
+.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn.primary:hover{background:#1f6d9e;color:#fff}
+
+.calwrap{overflow-x:auto;padding:10px}
+table.cal{border-collapse:separate;border-spacing:0;font-size:.62rem}
+.cal th,.cal td{text-align:center;white-space:nowrap}
+.cal thead th{padding:3px 0;color:var(--text3);font-weight:600}
+.cal thead th.sun{color:var(--error)}
+.cal thead th .dn{font-size:.72rem;color:var(--text2);font-weight:700;display:block}
+.cal .wname{text-align:left;position:sticky;left:0;background:var(--bg-card);padding:3px 8px 3px 4px;font-weight:600;font-size:.66rem;min-width:120px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;z-index:1;border-right:1px solid var(--border-light)}
+.cal td.cell{width:23px;height:23px;border:1px solid var(--border-light);border-radius:5px;font-weight:700;color:#fff}
+.cal td.cell.work{cursor:pointer}
+.cal td.cell.work:hover{transform:scale(1.22);box-shadow:var(--shadow-md);position:relative;z-index:2}
+.cal td.cell.sel{outline:2px solid var(--warning);outline-offset:-1px}
+.c-mt{background:var(--primary)} .c-m{background:var(--accent)} .c-rest{background:#cbd2d9;color:#5b6573!important}
+.c-abs{background:var(--warning)} .c-guard{background:#8b5cf6} .c-empty{background:transparent;border-color:transparent!important}
+.legend{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px 12px}
+.legend span{display:flex;align-items:center;gap:5px;font-size:.68rem;color:var(--text2)}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+.advisor .body{padding:14px}
+.empty-adv{text-align:center;color:var(--text3);padding:18px 10px;font-size:.8rem}
+.empty-adv .ico{width:40px;height:40px;border-radius:11px;background:var(--primary-light);color:var(--primary);display:grid;place-items:center;margin:0 auto 10px}
+.verdict{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:.88rem;padding:5px 12px;border-radius:var(--radius-pill);margin-bottom:10px}
+.verdict.yes{background:var(--success-bg);color:var(--success)} .verdict.no{background:var(--error-bg);color:var(--error)}
+.q-label{font-size:.72rem;color:var(--text3);font-weight:600;margin-bottom:5px}
+.reason{font-size:.82rem;color:var(--text2);margin-bottom:10px}
+.blockers,.cands{list-style:none;display:flex;flex-direction:column;gap:5px}
+.blockers li{background:var(--error-bg);border-left:3px solid var(--error);padding:7px 9px;border-radius:6px;font-size:.76rem;color:var(--text2)}
+.cands{margin-top:6px}
+.cands li{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:6px 9px;font-size:.78rem}
+.cands .av{width:23px;height:23px;border-radius:50%;background:var(--gradient);color:#fff;display:grid;place-items:center;font-size:.64rem;font-weight:700;flex-shrink:0}
+.gap-h{font-size:.78rem;font-weight:600;margin:10px 0 4px}
+.nores{font-size:.76rem;color:#92400e;background:var(--warning-bg);padding:7px 9px;border-radius:6px;border-left:3px solid var(--warning)}
+
+.pop{position:fixed;z-index:50;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);padding:5px;min-width:188px;animation:popIn .16s var(--ease-out)}
+@keyframes popIn{from{opacity:0;transform:translateY(-5px) scale(.97)}to{opacity:1;transform:none}}
+.pop .ph{font-size:.68rem;color:var(--text3);font-weight:600;padding:5px 7px 6px}
+.pop button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:none;border-radius:var(--radius-sm);padding:8px 9px;font-size:.8rem;font-family:inherit;color:var(--text1);cursor:pointer}
+.pop button:hover{background:var(--primary-light)}
+.pop .swap-on{color:var(--warning);font-weight:600}
+.spin{width:18px;height:18px;border:2.5px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:sp .7s linear infinite;margin:14px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--text1);color:#fff;padding:8px 14px;border-radius:var(--radius-pill);font-size:.76rem;box-shadow:var(--shadow-lg);opacity:0;transition:opacity .2s;z-index:99}
+.toast.show{opacity:1}
+.login-screen{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;z-index:200;padding:18px}
+.login-card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:16px;box-shadow:var(--shadow-lg);padding:26px 20px;text-align:center;width:100%;max-width:300px}
+.login-card .mark{margin:0 auto 14px}
+.login-card h2{font-size:1.05rem;font-weight:700;letter-spacing:-.02em}
+.login-card p{font-size:.76rem;color:var(--text3);margin-bottom:16px}
+.login-card input{width:100%;padding:10px 12px;margin-bottom:9px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:.84rem;background:var(--bg)}
+.login-card input:focus{outline:2px solid var(--primary);outline-offset:1px;border-color:var(--primary)}
+.login-card .urlrow{font-size:.66rem;color:var(--text3);text-align:left;margin:2px 2px 4px;font-weight:600}
+.login-card button{width:100%;padding:10px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:.86rem;font-weight:600;cursor:pointer;transition:background .15s}
+.login-card button:hover{background:#1f6d9e}
+.lerr{color:var(--error);font-size:.76rem;margin-top:9px}
+.foot{text-align:center;color:var(--text3);font-size:.68rem;margin:6px 0 2px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+  <div id="login" class="login-screen">
+    <div class="login-card">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg></div>
+      <h2>Shiftia · Diálisis</h2>
+      <p>Acceso de la supervisora</p>
+      <div class="urlrow">URL del motor</div>
+      <input id="lurl" placeholder="https://...up.railway.app" autocapitalize="off" spellcheck="false">
+      <input id="luser" placeholder="Usuario" autocomplete="username" autocapitalize="off">
+      <input id="lpass" type="password" placeholder="Contraseña" autocomplete="current-password">
+      <button id="lbtn">Entrar</button>
+      <div id="lerr" class="lerr hidden"></div>
+    </div>
+  </div>
+
+  <header>
+    <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg></div>
+    <div class="brand"><h1>Shiftia · Diálisis</h1><p>Asistente de la supervisora</p></div>
+    <div class="status"><span class="dot" id="dot"></span><span id="statusTxt">…</span></div>
+    <button id="logout" class="logout hidden" title="Cerrar sesión">⎋</button>
+  </header>
+
+  <div id="empty" class="hidden">
+    <label class="drop" id="drop">
+      <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+      <h2>Cargar planilla del mes</h2>
+      <p>Arrastra el PDF de Actais o haz clic. Se guarda en la nube.</p>
+      <input type="file" id="file" accept="application/pdf">
+    </label>
+  </div>
+
+  <div id="loaded" class="hidden">
+    <div class="toolbar">
+      <button class="btn" id="reloadBtn">↻ Actualizar</button>
+      <button class="btn primary" id="newPdfBtn">＋ Subir planilla</button>
+      <input type="file" id="file2" accept="application/pdf" class="hidden">
+    </div>
+    <div id="banner" class="banner"></div>
+    <div class="card"><ul class="checks" id="checks"></ul></div>
+    <div class="card">
+      <h3>📅 Planilla <span style="color:var(--text3);font-weight:500;font-size:.7rem">· clic en un día</span></h3>
+      <div class="calwrap"><table class="cal" id="cal"></table></div>
+      <div class="legend">
+        <span><i class="c-mt"></i>MT 12h</span><span><i class="c-m"></i>Mañana sup.</span>
+        <span><i class="c-rest"></i>Descanso</span><span><i class="c-abs"></i>Ausencia</span>
+      </div>
+    </div>
+    <div class="card advisor">
+      <h3>🧠 Consejero</h3>
+      <div class="body" id="advisor">
+        <div class="empty-adv"><div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>Haz clic en un día para preguntar. También con Alt+clic dentro de Actais.</div>
+      </div>
+    </div>
+    <div class="foot">Motor <b>ShiftiaCore</b> en la nube · planilla guardada · respuestas deterministas</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const DOW=['D','L','M','X','J','V','S'];
+const MONTHS=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+let BASE='', TOKEN='', DATA=null, swapSel=null, ID2NAME={};
+function humanize(t){if(!t)return t;Object.keys(ID2NAME).forEach(id=>{t=t.replace(new RegExp(id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),ID2NAME[id]);});return t;}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
+function initials(n){const p=n.replace(/,/g,'').split(/\s+/).filter(Boolean);return((p[0]||'?')[0]+(p[1]||'')[0]||'').toUpperCase();}
+function codeClass(c){if(!c)return'c-empty';if(c==='MT')return'c-mt';if(/^M/.test(c))return'c-m';if(['D','L','LD','FN'].includes(c))return'c-rest';if(/^G\d/.test(c))return'c-guard';return'c-abs';}
+
+async function api(path,{method='GET',json,form}={}){
+  const h={'Authorization':'Bearer '+TOKEN};
+  let body;
+  if(json){h['Content-Type']='application/json';body=JSON.stringify(json);}
+  if(form){body=form;}
+  const r=await fetch(BASE+path,{method,headers:h,body});
+  if(r.status===401){TOKEN='';await chrome.storage.local.remove('shiftiaToken');showLogin('Sesión caducada, entra de nuevo.');throw new Error('401');}
+  return r;
+}
+
+/* ---------- sesión ---------- */
+async function boot(){
+  const st=await chrome.storage.local.get(['engineUrl','shiftiaToken']);
+  BASE=(st.engineUrl||'').replace(/\/+$/,''); TOKEN=st.shiftiaToken||'';
+  $('#lurl').value=BASE;
+  if(BASE&&TOKEN){ $('#login').classList.add('hidden'); $('#logout').classList.remove('hidden'); ping(); loadData(); }
+  else showLogin();
+}
+function showLogin(err){
+  $('#login').classList.remove('hidden'); $('#loaded').classList.add('hidden'); $('#empty').classList.add('hidden'); $('#logout').classList.add('hidden');
+  if(err){$('#lerr').textContent=err;$('#lerr').classList.remove('hidden');}
+}
+async function doLogin(){
+  const base=($('#lurl').value||'').trim().replace(/\/+$/,'');
+  const user=$('#luser').value.trim(), pass=$('#lpass').value;
+  if(!base){$('#lerr').textContent='Falta la URL del motor';$('#lerr').classList.remove('hidden');return;}
+  $('#lerr').classList.add('hidden'); $('#lbtn').textContent='Entrando…';
+  try{
+    const r=await fetch(base+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user,password:pass})});
+    if(!r.ok){const b=await r.json().catch(()=>({}));throw new Error(b.detail||('Error '+r.status));}
+    const {token}=await r.json();
+    BASE=base; TOKEN=token;
+    await chrome.storage.local.set({engineUrl:base, shiftiaToken:token});
+    $('#login').classList.add('hidden'); $('#logout').classList.remove('hidden');
+    ping(); loadData();
+  }catch(e){
+    $('#lerr').textContent=(e.message==='Failed to fetch')?'No conecto con esa URL':e.message;
+    $('#lerr').classList.remove('hidden');
+  }finally{$('#lbtn').textContent='Entrar';}
+}
+$('#lbtn').addEventListener('click',doLogin);
+$('#lpass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+$('#logout').addEventListener('click',async()=>{await chrome.storage.local.remove('shiftiaToken');TOKEN='';showLogin();});
+
+async function ping(){
+  try{const r=await fetch(BASE+'/');if(!r.ok)throw 0;$('#dot').className='dot up';$('#statusTxt').textContent='Motor conectado';}
+  catch(e){$('#dot').className='dot down';$('#statusTxt').textContent='Motor no conecta';}
+}
+
+/* ---------- datos ---------- */
+async function loadData(){
+  try{
+    const r=await api('/api/data'); const d=await r.json();
+    if(!d.workers||!d.workers.length){ $('#loaded').classList.add('hidden'); $('#empty').classList.remove('hidden'); return; }
+    DATA=d; $('#empty').classList.add('hidden'); $('#loaded').classList.remove('hidden'); render();
+  }catch(e){ if(e.message!=='401') toast('No pude cargar la planilla'); }
+}
+function uploadPdf(file){
+  if(file.type!=='application/pdf'){toast('Tiene que ser un PDF');return;}
+  toast('Subiendo y guardando…');
+  const form=new FormData(); form.append('files',file,file.name);
+  api('/api/import/pdf-upload',{method:'POST',form}).then(r=>r.json()).then(()=>{toast('Planilla guardada');loadData();}).catch(()=>toast('Error al subir'));
+}
+$('#file').addEventListener('change',e=>{if(e.target.files[0])uploadPdf(e.target.files[0]);});
+$('#file2').addEventListener('change',e=>{if(e.target.files[0])uploadPdf(e.target.files[0]);});
+$('#newPdfBtn').addEventListener('click',()=>$('#file2').click());
+$('#reloadBtn').addEventListener('click',loadData);
+const drop=$('#drop');
+['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop',e=>{if(e.dataTransfer.files[0])uploadPdf(e.dataTransfer.files[0]);});
+
+/* ---------- render ---------- */
+function render(){
+  ID2NAME={};DATA.workers.forEach(w=>ID2NAME[w.id]=w.name.split(',')[0].trim());
+  const a=DATA.audit,b=$('#banner');
+  b.className='banner '+(a.compliant?'ok':'bad');
+  const nIss=a.checks.reduce((s,c)=>s+c.issues.length,0);
+  b.innerHTML=`<div class="badge">${a.compliant
+    ?'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+    :'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'}</div>
+    <div><div class="big">${a.compliant?'Cumple convenio':'No cumple'}</div>
+    <div class="sub">${MONTHS[DATA.month-1]} ${DATA.year} · ${DATA.workers.length} personas${a.compliant?'':' · '+nIss+' incidencia(s)'}</div></div>`;
+  $('#checks').innerHTML=a.checks.map(c=>{
+    const ok=c.status==='pass';
+    const iss=c.issues.slice(0,3).map(i=>`<div class="iss">· ${i}</div>`).join('');
+    return `<li><span class="ck ${ok?'ok':'bad'}">${ok?'✓':'✗'}</span><div><div>${c.id}${c.citation?` <span class="cite">· ${c.citation}</span>`:''}</div>${iss}</div></li>`;
+  }).join('');
+  renderCal();
+}
+function renderCal(){
+  const D=DATA.days;
+  let head='<thead><tr><th class="wname"></th>';
+  for(let d=1;d<=D;d++){const dow=new Date(DATA.year,DATA.month-1,d).getDay();head+=`<th class="${dow===0?'sun':''}"><span class="dn">${d}</span>${DOW[dow]}</th>`;}
+  head+='</tr></thead>';
+  let rows='';
+  for(const w of DATA.workers){
+    rows+=`<tr><td class="wname" title="${w.name}">${w.name}</td>`;
+    for(let d=1;d<=D;d++){
+      const code=w.schedule[d-1]||'';
+      const work=code&&!['D','L','LD','FN',''].includes(code);
+      rows+=`<td class="cell ${codeClass(code)} ${work?'work':''}" data-w="${w.id}" data-d="${d-1}" data-name="${w.name}" data-code="${code}">${code}</td>`;
+    }
+    rows+='</tr>';
+  }
+  $('#cal').innerHTML=head+'<tbody>'+rows+'</tbody>';
+  $('#cal').querySelectorAll('td.cell.work').forEach(td=>td.addEventListener('click',onCell));
+}
+function onCell(ev){
+  closePop();
+  const td=ev.currentTarget,w=td.dataset.w,d=+td.dataset.d,name=td.dataset.name,code=td.dataset.code;
+  const pop=document.createElement('div');pop.className='pop';pop.id='pop';
+  const swapTxt=swapSel?`🔁 Cambiar con ${swapSel.name.split(',')[0]} (d.${swapSel.d+1})`:'🔁 Marcar para cambio';
+  pop.innerHTML=`<div class="ph">${name.split(',')[0]} · día ${d+1} · ${code}</div>
+    <button data-a="release">🆓 ¿Puede librar?</button>
+    <button data-a="cover">👥 ¿Quién cubre?</button>
+    <button data-a="swap" class="${swapSel?'swap-on':''}">${swapTxt}</button>`;
+  document.body.appendChild(pop);
+  const r=td.getBoundingClientRect();
+  pop.style.top=Math.min(r.bottom+5,window.innerHeight-pop.offsetHeight-10)+'px';
+  pop.style.left=Math.max(8,Math.min(r.left,window.innerWidth-pop.offsetWidth-10))+'px';
+  pop.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>act(btn.dataset.a,{w,d,name,code})));
+}
+function closePop(){const p=$('#pop');if(p)p.remove();}
+document.addEventListener('click',ev=>{if(!ev.target.closest('.pop')&&!ev.target.closest('td.cell'))closePop();});
+
+async function act(a,c){
+  closePop();
+  try{
+    if(a==='swap'){
+      if(!swapSel){swapSel={w:c.w,d:c.d,name:c.name};markSel();toast('Marcado. Elige el 2º día.');return;}
+      if(swapSel.w===c.w&&swapSel.d===c.d){swapSel=null;markSel();toast('Cancelado');return;}
+      const first=swapSel;swapSel=null;markSel();loading('Comprobando el cambio…');
+      const res=await(await api('/api/assistant/cambio',{method:'POST',json:{cell:{worker_a:first.w,day_a:first.d,worker_b:c.w,day_b:c.d}}})).json();
+      showVerdict(`Cambio: ${first.name.split(',')[0]} (d.${first.d+1}) ↔ ${c.name.split(',')[0]} (d.${c.d+1})`,res);return;
+    }
+    if(a==='release'){loading('Comprobando convenio y cobertura…');
+      const res=await(await api('/api/assistant/librar',{method:'POST',json:{cell:{worker_id:c.w,day:c.d}}})).json();
+      showVerdict(`¿${c.name.split(',')[0]} puede librar el día ${c.d+1}?`,res);}
+    if(a==='cover'){loading('Buscando quién cubre…');
+      const res=await(await api('/api/assistant/whoCovers',{method:'POST',json:{cell:{worker_id:c.w,day:c.d}}})).json();
+      showCover(`Si falta ${c.name.split(',')[0]} el día ${c.d+1}`,res);}
+  }catch(e){if(e.message!=='401')$('#advisor').innerHTML=`<div class="nores">No pude consultar el motor.</div>`;}
+}
+function markSel(){document.querySelectorAll('td.sel').forEach(t=>t.classList.remove('sel'));if(swapSel)document.querySelector(`td[data-w="${swapSel.w}"][data-d="${swapSel.d}"]`)?.classList.add('sel');}
+function loading(m){$('#advisor').innerHTML=`<div class="q-label">${m}</div><div class="spin"></div>`;}
+function showVerdict(q,res){
+  if(res.detail){$('#advisor').innerHTML=`<div class="nores">${res.detail}</div>`;return;}
+  const bl=(res.blockers||[]).map(b=>`<li>${humanize(typeof b==='string'?b:(b.detail||JSON.stringify(b)))}</li>`).join('');
+  $('#advisor').innerHTML=`<div class="q-label">${q}</div><div class="verdict ${res.ok?'yes':'no'}">${res.ok?'✓ Sí':'✗ No'}</div><div class="reason">${humanize(res.reason||'')}</div>${bl?`<ul class="blockers">${bl}</ul>`:''}`;
+}
+function showCover(q,res){
+  if(res.detail){$('#advisor').innerHTML=`<div class="nores">${res.detail}</div>`;return;}
+  const gaps=res.gaps||[];let html=`<div class="q-label">${q}</div>`;
+  if(!gaps.length)html+=`<div class="verdict yes">✓ Cubierto</div><div class="reason">No se rompe la cobertura mínima.</div>`;
+  for(const g of gaps){
+    const falta=g.need-g.have;
+    html+=`<div class="gap-h">⚠️ Faltan ${falta} en «${g.shift}»${g.skill?' / '+g.skill:''} (día ${g.day+1})</div>`;
+    if(g.candidates&&g.candidates.length)html+='<ul class="cands">'+g.candidates.slice(0,5).map(c=>`<li><span class="av">${initials(c.name||'')}</span>${(c.name||'').split(',')[0]}</li>`).join('')+'</ul>';
+    else html+=`<div class="nores">Sin sustituto directo legal — reorganizar la planilla.</div>`;
+  }
+  $('#advisor').innerHTML=html;
+}
+
+boot();
+</script>
+</body>
+</html>

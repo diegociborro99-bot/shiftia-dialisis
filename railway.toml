@@ -1,0 +1,11 @@
+# Railway: construye con el Dockerfile y arranca el backend.
+# Variables a definir en el panel de Railway:
+#   DATABASE_URL  → la del plugin Postgres (Railway lo inyecta solo si lo añades)
+#   JWT_SECRET    → una cadena larga y secreta (firma de los tokens)
+[build]
+builder = "dockerfile"
+
+[deploy]
+startCommand = "sh -c 'cd /app/server && uvicorn main:app --host 0.0.0.0 --port ${PORT:-8770}'"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

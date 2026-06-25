@@ -1,0 +1,8 @@
+extension/
+ui/
+app.py
+iniciar.command
+*.db
+**/__pycache__/
+**/*.pyc
+.git/

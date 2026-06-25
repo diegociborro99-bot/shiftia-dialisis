@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "Shiftia · Diálisis",
+  "version": "0.1.0",
+  "description": "Asistente de la supervisora de diálisis: lee la planilla, valida convenio (turnos de 12 h, máx 2 días seguidos, 5 enfermeras) y responde librar / cambio / catástrofe. Panel propio + Alt+clic en Actais.",
+  "minimum_chrome_version": "114",
+  "permissions": ["storage", "sidePanel", "scripting", "notifications"],
+  "host_permissions": [
+    "*://personal.hospitaldejove.com/*",
+    "https://*.up.railway.app/*",
+    "http://localhost:8770/*"
+  ],
+  "background": {
+    "service_worker": "background/sw.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Shiftia Diálisis",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "side_panel": {
+    "default_path": "sidepanel/index.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://personal.hospitaldejove.com/*"],
+      "js": [
+        "shared/month-assembler.js",
+        "shared/absence-overlay.js",
+        "shared/shift-colors.js",
+        "content/detector.js"
+      ],
+      "css": ["content/overlay.css"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["content/page-bridge.js"],
+      "matches": ["*://personal.hospitaldejove.com/*"]
+    }
+  ]
+}
