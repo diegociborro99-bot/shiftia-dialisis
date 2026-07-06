@@ -215,12 +215,22 @@ def sync_planilla(pid: str, body: dict = Body(...), _claims=Depends(auth)):
     Actais. Devuelve el diff de lo que cambió (para que web y extensión bailen
     a la vez) y la auditoría recalculada."""
     p = _get(pid)
+    # Coteja el mes/año de la pantalla de Actais con el de la planilla guardada:
+    # así el volcado cae en el MES correcto (no en otro mes por error).
+    y, m = body.get("year"), body.get("month")
+    if y is not None and m is not None and (int(y) != p["year"] or int(m) != p["month"]):
+        raise HTTPException(
+            status_code=409,
+            detail=(f"La pantalla es {int(m):02d}/{int(y)} pero esta planilla es "
+                    f"{p['month']:02d}/{p['year']}. Elige la planilla de ese mes."))
     cells = body.get("cells") or body.get("schedule") or {}
     res = E.sync_worker_month(
         p, body.get("worker") or body.get("worker_name"), cells,
         worker_id=body.get("worker_id"), role=body.get("role"), hours=body.get("hours"))
     save_planilla(p)
     res["ok"] = True
+    res["year"] = p["year"]
+    res["month"] = p["month"]
     res["audit"] = E.audit_json(p)
     return res
 

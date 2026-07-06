@@ -386,16 +386,21 @@ async function scrapeActais(){
   return res;
 }
 async function doSync(){
-  const pid=$('#syncTarget').value;
-  if(!pid){toast('Elige una planilla destino');return;}
   syncOut('Leyendo la pantalla de Actais…');
   let a; try{a=await scrapeActais();}catch(e){syncOut('⚠️ '+e.message);return;}
   const cells={};(a.cells||[]).forEach((code,day)=>{if(code)cells[day]=code;});
   if(!Object.keys(cells).length){syncOut('⚠️ No leí turnos en la pantalla. Espera a que Actais pinte el mes y reintenta.');return;}
-  const mm=String((a.month||0)+1).padStart(2,'0');
-  syncOut(`Volcando ${a.workerName?('<b>'+a.workerName.split(',')[0]+'</b>'):'el empleado'} (${mm}/${a.year})…`);
+  const screenY=a.year, screenM=(a.month||0)+1, mm=String(screenM).padStart(2,'0');
+  // Cotejar el MES de la pantalla con las planillas guardadas: el volcado va a
+  // la planilla de ESE mes (mismo empleado, mismo mes).
+  let matches=[];
+  try{const r=await api(`/api/match?year=${screenY}&month=${screenM}`);const d=await r.json();matches=(d&&d.planillas)||[];}catch(e){if(e.message==='401')return;}
+  if(!matches.length){syncOut(`⚠️ No hay planilla guardada de <b>${mm}/${screenY}</b>. Expórtala primero en la web y reintenta.`);return;}
+  let pid=$('#syncTarget').value;
+  if(!matches.some(p=>p.id===pid)){pid=matches[0].id;$('#syncTarget').value=pid;toast(`Planilla de ${mm}/${screenY} seleccionada`);}
+  syncOut(`Comparando ${a.workerName?('<b>'+a.workerName.split(',')[0]+'</b>'):'el empleado'} (${mm}/${screenY}) con lo guardado…`);
   try{
-    const r=await api('/api/planillas/'+pid+'/sync',{method:'POST',json:{worker_name:a.workerName||'',worker_id:a.workerId||null,cells}});
+    const r=await api('/api/planillas/'+pid+'/sync',{method:'POST',json:{worker_name:a.workerName||'',worker_id:a.workerId||null,cells,year:screenY,month:screenM}});
     if(!r.ok){const b=await r.json().catch(()=>({}));throw new Error(b.detail||('Error '+r.status));}
     renderSyncDiff(a,await r.json()); loadTargets();
   }catch(e){if(e.message!=='401')syncOut('⚠️ '+e.message);}
