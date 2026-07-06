@@ -29,13 +29,37 @@ Dos piezas:
 
 - **Clic en un día** del calendario → ¿puede librar? · ¿quién cubre? · marcar para cambio.
 - Dentro de **Actais**: **Alt + clic** en una celda → mismo menú, sobre la planilla guardada.
-- **＋ Subir planilla** para actualizar el mes (vuelve a leer el PDF y lo guarda).
+- **＋ PDF** para actualizar el mes (vuelve a leer el PDF y lo guarda).
+- **🔄 Sincronizar**: si la supervisora cambió algo en Actais, con el calendario
+  del trabajador en pantalla pulsa 🔄 en el panel. Shiftia lee la pantalla,
+  **muestra las diferencias** con la planilla guardada y solo al confirmar las
+  aplica (a NUESTRA base de datos — Actais no se toca nunca). También celda a
+  celda con Alt+clic → «Volcar cambio».
+- **🕘 Historial**: cada PDF, sincronización o restauración deja una versión.
+  Cualquier cambio se puede **deshacer** desde ahí.
+
+Si al sincronizar aparece el aviso «días que no se pudieron leer», Actais está
+usando un código de turno que la extensión aún no conoce: apúntalo (sale la
+clase `S_XX`) para añadirlo al mapa de `extension/content/detector.js`.
 
 ## Por qué no se borran las planillas
 
-Viven en una **base de datos Postgres** en la nube. Sobreviven a reinicios y
-redeploys. La extensión solo cachea una copia para ir rápida, pero la verdad
-está en la BD.
+Viven en una **base de datos Postgres** en la nube, con **historial de
+versiones** (tabla `planilla_versions`). Sobreviven a reinicios y redeploys, y
+cada cambio queda registrado y es reversible. La extensión solo cachea una
+copia para ir rápida, pero la verdad está en la BD.
+
+## Variables de entorno (Railway → Variables)
+
+- `DATABASE_URL` — Postgres (obligatoria en la nube).
+- `JWT_SECRET` — secreto de firma de sesiones (obligatoria; si falta se usa
+  una de desarrollo y el servidor lo avisa por log).
+- `SHIFTIA_USER` / `SHIFTIA_PASS_HASH` — credenciales de acceso. El hash se
+  genera con:
+  `python -c "import hashlib;print(hashlib.sha256('USUARIO:clave'.encode()).hexdigest())"`
+  Definirlas permite **rotar la contraseña sin tocar código**.
+- `ALLOWED_ORIGINS` — (opcional) orígenes CORS separados por comas, p. ej.
+  `chrome-extension://<id-de-la-extension>`.
 
 ## Las normas de diálisis (ya configuradas)
 

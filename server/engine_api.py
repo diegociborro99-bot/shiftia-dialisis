@@ -4,6 +4,7 @@ Puente entre la planilla persistida (JSON) y el motor shiftia-core.
 Forma normalizada de una planilla:
   {year, month, days, holidays:[domingos], workers:[{id,name,role,hours,schedule:{day:code}}]}
 """
+import calendar
 import os
 import re
 import sys
@@ -26,7 +27,10 @@ from analyze import dialisis_rules                          # noqa: E402
 from shiftiacore import (Problem, Worker, audit_compliance,  # noqa: E402
                          can_release, can_swap, cover_catastrophe)
 
-YEAR, MONTH, DAYS = 2026, 10, 31
+# Fallback si el PDF no trae mes/año en su texto (normalmente sí lo trae).
+# Sobreescribible por entorno para no tocar código.
+YEAR = int(os.environ.get("SHIFTIA_DEFAULT_YEAR", 2026))
+MONTH = int(os.environ.get("SHIFTIA_DEFAULT_MONTH", 10))
 
 
 def slug(name: str) -> str:
@@ -57,8 +61,11 @@ def planilla_from_pdf(raw: bytes) -> dict:
         workers.append({"id": slug(name), "name": name, "role": role,
                         "hours": w["hours"],
                         "schedule": {str(d): c for d, c in w["schedule"].items()}})
-    return {"year": YEAR, "month": MONTH, "days": DAYS,
-            "holidays": [int(d.split("-")[2]) for d in _sundays(YEAR, MONTH)],
+    year = data.get("year") or YEAR
+    month = data.get("month") or MONTH
+    return {"year": year, "month": month,
+            "days": calendar.monthrange(year, month)[1],
+            "holidays": [int(d.split("-")[2]) for d in _sundays(year, month)],
             "workers": workers}
 
 
@@ -121,18 +128,44 @@ def data_response(p: dict) -> dict:
             "audit": audit_json(p)}
 
 
+def _day(cell: dict, key: str, days: int):
+    """Día validado (0-based) o ValueError con mensaje legible."""
+    raw = cell.get(key)
+    try:
+        d = int(raw)
+    except (TypeError, ValueError):
+        raise ValueError(f"Falta el día (campo '{key}').")
+    if not (0 <= d < days):
+        raise ValueError(f"Día fuera de rango: {d + 1} (el mes tiene {days} días).")
+    return d
+
+
+def _worker_id(p: dict, cell: dict, *keys):
+    ref = next((cell.get(k) for k in keys if cell.get(k)), None)
+    wid = resolve(p, ref)
+    if wid not in {w["id"] for w in p["workers"]}:
+        raise ValueError(f"No encuentro al trabajador «{ref}» en la planilla guardada.")
+    return wid
+
+
 def answer(p: dict, action: str, cell: dict) -> dict:
-    prob, sched = build_problem(p)
     if action in ("validateConvenio", "validar", "audit"):
         return audit_json(p)
-    if action in ("cambio", "swap"):
-        a = resolve(p, cell.get("worker_a") or cell.get("name_a"))
-        b = resolve(p, cell.get("worker_b") or cell.get("name_b"))
-        return can_swap(prob, sched, a, int(cell["day_a"]), b, int(cell["day_b"]))
-    wid = resolve(p, cell.get("worker") or cell.get("worker_name") or cell.get("worker_id"))
-    day = int(cell.get("day"))
-    if action in ("librar", "release"):
-        return can_release(prob, sched, wid, day)
-    if action in ("whoCovers", "cover", "vacaciones"):
-        return cover_catastrophe(prob, sched, {wid: [day]})
+    days = int(p.get("days", 31))
+    try:
+        if action in ("cambio", "swap"):
+            a = _worker_id(p, cell, "worker_a", "name_a")
+            b = _worker_id(p, cell, "worker_b", "name_b")
+            da, db_ = _day(cell, "day_a", days), _day(cell, "day_b", days)
+            prob, sched = build_problem(p)
+            return can_swap(prob, sched, a, da, b, db_)
+        if action in ("librar", "release", "whoCovers", "cover", "vacaciones"):
+            wid = _worker_id(p, cell, "worker", "worker_name", "worker_id")
+            day = _day(cell, "day", days)
+            prob, sched = build_problem(p)
+            if action in ("librar", "release"):
+                return can_release(prob, sched, wid, day)
+            return cover_catastrophe(prob, sched, {wid: [day]})
+    except ValueError as e:
+        return {"ok": False, "error": str(e)}
     return {"ok": False, "error": f"acción no soportada: {action}"}

@@ -73,11 +73,48 @@ async function ask(action, cell) {
   return formatForMenu(action, await res.json());
 }
 
+// POST JSON genérico al backend con token; devuelve {ok, data|error}.
+// Lo usan las acciones de sincronización (preview/apply) del menú Alt+clic.
+async function postJson(path, payload) {
+  const base = await getBase();
+  const token = await getToken();
+  if (!base) return { ok: false, error: "⚙️ Configura la URL del motor en el panel (icono de la extensión)." };
+  if (!token) return { ok: false, error: "🔒 Inicia sesión en el panel de Shiftia." };
+  let res;
+  try {
+    res = await fetch(base + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+      body: JSON.stringify(payload || {})
+    });
+  } catch (e) {
+    return { ok: false, error: "⚠️ No conecto con el motor (" + base + ")." };
+  }
+  if (res.status === 401) {
+    await chrome.storage.local.remove("shiftiaToken");
+    chrome.runtime.sendMessage({ type: "panel:sessionExpired" }).catch(() => {});
+    return { ok: false, error: "🔒 Sesión caducada. Vuelve a iniciar sesión en el panel." };
+  }
+  let data = null;
+  try { data = await res.json(); } catch (_) {}
+  if (!res.ok) return { ok: false, error: (data && data.detail) || ("Error " + res.status) };
+  if (data && data.ok === false) return { ok: false, error: data.error || "Error del motor" };
+  return { ok: true, data };
+}
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg && msg.type === "shiftia:askEngine") {
     ask(msg.payload.action, msg.payload.args)
       .then((text) => sendResponse({ ok: true, data: text }))
       .catch((e) => sendResponse({ ok: false, error: e.message }));
+    return true;
+  }
+  if (msg && msg.type === "shiftia:syncPreview") {
+    postJson("/api/sync/preview", msg.payload).then(sendResponse);
+    return true;
+  }
+  if (msg && msg.type === "shiftia:syncApply") {
+    postJson("/api/sync/apply", msg.payload).then(sendResponse);
     return true;
   }
   return false;

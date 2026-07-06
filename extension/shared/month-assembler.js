@@ -50,19 +50,35 @@
     const { workerId, year, month } = dominant[0];
     const cells = new Array(31).fill('');
     const seen = new Set();
+    const unknownByDay = new Map();
     for (const c of dominant) {
       seen.add(c.day);
       const shift = c.shift ? String(c.shift).trim().toUpperCase() : '';
       // Día duplicado: no pisar un valor existente con vacío
       if (shift || !cells[c.day]) cells[c.day] = shift;
+      // Celda con contenido que NO supimos interpretar (clase S_X nueva,
+      // texto raro…): se reporta en vez de tragarla en silencio, y el
+      // backend excluye esos días del diff para no borrar nada por error.
+      if (!shift && c.hadContent) {
+        unknownByDay.set(c.day, {
+          day: c.day,
+          rawClass: c.rawClass || null,
+          text: String(c.scheduleFull || '').slice(0, 60)
+        });
+      } else if (shift) {
+        unknownByDay.delete(c.day);
+      }
     }
+    const unknownDays = Array.from(unknownByDay.values()).sort((a, b) => a.day - b.day);
 
     return {
       ok: true,
       workerId, year, month, cells,
+      unknownDays,
       stats: {
         daysSeen: seen.size,
-        filled: cells.filter(Boolean).length
+        filled: cells.filter(Boolean).length,
+        unknown: unknownDays.length
       }
     };
   }

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Shiftia · Diálisis",
-  "version": "0.1.0",
-  "description": "Asistente de la supervisora de diálisis: lee la planilla, valida convenio (turnos de 12 h, máx 2 días seguidos, 5 enfermeras) y responde librar / cambio / catástrofe. Panel propio + Alt+clic en Actais.",
+  "version": "0.2.0",
+  "description": "Asistente de la supervisora de diálisis: lee la planilla, valida convenio (turnos de 12 h, máx 2 días seguidos, 5 enfermeras), responde librar / cambio / catástrofe y sincroniza lo que ves en Actais con la planilla guardada. Panel propio + Alt+clic en Actais.",
   "minimum_chrome_version": "114",
   "permissions": ["storage", "sidePanel", "scripting", "notifications"],
   "host_permissions": [

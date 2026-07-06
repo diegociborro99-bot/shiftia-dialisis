@@ -26,11 +26,25 @@ def _to_hours(s):
 
 _LEG = re.compile(r"^(D|MT|M7H|M|G\d{2})\s+(.+?)(?:\s+(?:G\d{2}|D|MT|M7H|M)\s.*)?$")
 
+_MONTH_NAMES = {"ENERO": 1, "FEBRERO": 2, "MARZO": 3, "ABRIL": 4, "MAYO": 5,
+                "JUNIO": 6, "JULIO": 7, "AGOSTO": 8, "SEPTIEMBRE": 9,
+                "SETIEMBRE": 9, "OCTUBRE": 10, "NOVIEMBRE": 11, "DICIEMBRE": 12}
+_MONTH_RE = re.compile(
+    r"\b(" + "|".join(_MONTH_NAMES) + r")\b(?:\s+DE)?\s+(20\d{2})\b", re.IGNORECASE)
+
 
 def parse_planilla(path):
+    """Devuelve {workers, legend, year, month}. year/month se detectan del
+    texto del PDF ("OCTUBRE 2026"); None si el PDF no lo dice."""
     workers, legend = {}, {}
+    year = month = None
     with pdfplumber.open(path) as pdf:
         for page in pdf.pages:
+            if month is None:
+                m = _MONTH_RE.search(page.extract_text() or "")
+                if m:
+                    month = _MONTH_NAMES[m.group(1).upper()]
+                    year = int(m.group(2))
             for t in page.extract_tables() or []:
                 if len(t) < 3:
                     continue
@@ -56,7 +70,7 @@ def parse_planilla(path):
                 m = _LEG.match(line.strip())
                 if m and m.group(1) not in legend:
                     legend[m.group(1)] = m.group(2).strip()
-    return {"workers": workers, "legend": legend}
+    return {"workers": workers, "legend": legend, "year": year, "month": month}
 
 
 if __name__ == "__main__":

@@ -155,8 +155,10 @@ table.cal{border-collapse:separate;border-spacing:0;font-size:.62rem}
 
   <div id="loaded" class="hidden">
     <div class="toolbar">
-      <button class="btn" id="reloadBtn">↻ Actualizar</button>
-      <button class="btn primary" id="newPdfBtn">＋ Subir planilla</button>
+      <button class="btn" id="reloadBtn" title="Recargar la planilla guardada">↻</button>
+      <button class="btn" id="syncBtn" title="Leer el calendario abierto en Actais y comparar con la planilla guardada">🔄 Sincronizar</button>
+      <button class="btn" id="histBtn" title="Historial de versiones">🕘</button>
+      <button class="btn primary" id="newPdfBtn">＋ PDF</button>
       <input type="file" id="file2" accept="application/pdf" class="hidden">
     </div>
     <div id="banner" class="banner"></div>
@@ -353,6 +355,95 @@ function showCover(q,res){
   }
   $('#advisor').innerHTML=html;
 }
+
+/* ---------- sincronizar con Actais ----------
+   Lee el calendario visible en la pestaña de Actais, pide al backend el DIFF
+   contra la planilla guardada y lo muestra; solo se guarda al confirmar.
+   Actais NUNCA se modifica: se escribe en NUESTRA base de datos. */
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function findActaisTab(){
+  const tabs=await chrome.tabs.query({url:'*://personal.hospitaldejove.com/*'});
+  return tabs.find(t=>t.active)||tabs[0]||null;
+}
+async function syncFromActais(){
+  const adv=$('#advisor');
+  const tab=await findActaisTab();
+  if(!tab){adv.innerHTML='<div class="nores">Abre Actais (personal.hospitaldejove.com) con el calendario del trabajador en pantalla y vuelve a pulsar 🔄.</div>';return;}
+  loading('Leyendo la pantalla de Actais…');
+  let scr=null;
+  try{scr=await chrome.tabs.sendMessage(tab.id,{type:'actais:scrapeMonth'});}
+  catch(e){adv.innerHTML='<div class="nores">No conecto con la pestaña de Actais. Recárgala (F5) y reintenta.</div>';return;}
+  if(!scr||!scr.ok){adv.innerHTML=`<div class="nores">${esc(scr&&scr.error||'No pude leer el calendario de Actais.')}</div>`;return;}
+  loading('Comparando con la planilla guardada…');
+  let d;
+  try{
+    const r=await api('/api/sync/preview',{method:'POST',json:{
+      actaisId:scr.workerId, workerName:scr.workerName||null,
+      year:scr.year, month:scr.month+1, // extensión 0-based → backend 1-based
+      cells:scr.cells, unknownDays:scr.unknownDays||[]
+    }});
+    d=await r.json();
+  }catch(e){if(e.message!=='401')adv.innerHTML='<div class="nores">No pude consultar el motor.</div>';return;}
+  if(d.ok===false||d.detail){adv.innerHTML=`<div class="nores">${esc(d.error||d.detail)}</div>`;return;}
+  renderSyncPreview(d,scr);
+}
+function renderSyncPreview(d,scr){
+  const adv=$('#advisor');
+  const warn=(d.warnings||[]).map(w=>`<div class="nores" style="margin-top:6px">${esc(w)}</div>`).join('');
+  if(!d.changes.length){
+    adv.innerHTML=`<div class="q-label">Sincronización · ${esc(d.worker.name)}</div><div class="verdict yes">✓ Todo coincide</div><div class="reason">La planilla guardada ya refleja lo que hay en Actais.</div>${warn}`;
+    return;
+  }
+  const rows=d.changes.map(c=>`<li>Día <b>${c.day+1}</b>: ${esc(c.from||'∅')} → <b>${esc(c.to||'∅')}</b></li>`).join('');
+  adv.innerHTML=`<div class="q-label">Sincronización · ${esc(d.worker.name)}</div>
+    <div class="reason">${d.changes.length} diferencia(s) entre Actais y la planilla guardada:</div>
+    <ul class="blockers">${rows}</ul>${warn}
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn primary" id="syncApplyBtn">✅ Aplicar ${d.changes.length} cambio(s)</button>
+      <button class="btn" id="syncCancelBtn">Cancelar</button>
+    </div>`;
+  $('#syncCancelBtn').addEventListener('click',()=>{adv.innerHTML='<div class="empty-adv">Sincronización cancelada. No se ha cambiado nada.</div>';});
+  $('#syncApplyBtn').addEventListener('click',async()=>{
+    loading('Guardando (queda en el historial)…');
+    try{
+      const res=await(await api('/api/sync/apply',{method:'POST',json:{workerId:d.worker.id,actaisId:scr.workerId,changes:d.changes}})).json();
+      if(res.detail){adv.innerHTML=`<div class="nores">${esc(res.detail)}</div>`;return;}
+      toast('Planilla sincronizada');
+      adv.innerHTML=`<div class="verdict yes">✓ Sincronizado</div><div class="reason">${esc(res.summary||'')}</div><div class="reason">Puedes deshacerlo desde 🕘 Historial.</div>`;
+      loadData();
+    }catch(e){if(e.message!=='401')adv.innerHTML='<div class="nores">No pude guardar los cambios.</div>';}
+  });
+}
+$('#syncBtn').addEventListener('click',syncFromActais);
+
+/* ---------- historial de versiones ---------- */
+const SRC_LABEL={pdf:'📄 PDF',sync:'🔄 Sync Actais',restore:'⏪ Restauración'};
+async function showHistory(){
+  const adv=$('#advisor');
+  loading('Cargando historial…');
+  try{
+    const d=await(await api('/api/history')).json();
+    const vs=d.versions||[];
+    if(!vs.length){adv.innerHTML='<div class="empty-adv">Sin versiones todavía. Cada PDF subido o sincronización queda registrado aquí.</div>';return;}
+    adv.innerHTML=`<div class="q-label">Historial · ${vs.length} versión(es) recientes</div><ul class="cands">`+
+      vs.map(v=>`<li style="align-items:flex-start"><div style="min-width:0;flex:1">
+        <div>${SRC_LABEL[v.source]||esc(v.source)} · ${new Date(v.created_at+'Z').toLocaleString('es-ES',{dateStyle:'short',timeStyle:'short'})}</div>
+        <div style="font-size:.68rem;color:var(--text3)" title="${esc(v.summary)}">${esc((v.summary||'').slice(0,90))}</div></div>
+        <button class="btn" style="flex:0 0 auto" data-v="${v.id}">Restaurar</button></li>`).join('')+'</ul>';
+    adv.querySelectorAll('button[data-v]').forEach(b=>b.addEventListener('click',async()=>{
+      if(b.dataset.armed!=='1'){b.dataset.armed='1';b.textContent='¿Seguro?';setTimeout(()=>{b.dataset.armed='';b.textContent='Restaurar';},3000);return;}
+      loading('Restaurando…');
+      try{
+        const res=await(await api('/api/history/restore',{method:'POST',json:{versionId:+b.dataset.v}})).json();
+        if(res.detail){adv.innerHTML=`<div class="nores">${esc(res.detail)}</div>`;return;}
+        toast('Versión restaurada');
+        adv.innerHTML='<div class="verdict yes">✓ Restaurada</div><div class="reason">La versión anterior también queda en el historial.</div>';
+        loadData();
+      }catch(e){if(e.message!=='401')adv.innerHTML='<div class="nores">No pude restaurar.</div>';}
+    }));
+  }catch(e){if(e.message!=='401')adv.innerHTML='<div class="nores">No pude cargar el historial.</div>';}
+}
+$('#histBtn').addEventListener('click',showHistory);
 
 boot();
 </script>

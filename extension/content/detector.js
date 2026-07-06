@@ -169,11 +169,18 @@
     const punchText = cellEl.querySelector('.p2 .move')?.textContent?.trim() || '';
     const idProgrammed = cellEl.getAttribute('idprogrammedcalendar') || null;
 
+    // ¿La celda TENÍA contenido aunque no lo hayamos sabido interpretar?
+    // Sirve para avisar de códigos S_X nuevos en vez de tragarlos en silencio.
+    const hadContent = !!(sClass || scheduleFull || slotEl ||
+                          (cellEl.style && cellEl.style.backgroundColor));
+
     return {
       workerId, day, month, year,
       shift, shiftLabel, scheduleFull, planification, punchText,
       idProgrammedCalendar: idProgrammed,
-      cellId: idAttr
+      cellId: idAttr,
+      rawClass: sClass || null,
+      hadContent
     };
   }
 
@@ -378,23 +385,84 @@
     if (rect.bottom > window.innerHeight) menuEl.style.top = `${window.innerHeight - rect.height - 8}px`;
   }
 
-  async function runAction(actionId, cell) {
+  function ensureResultEl() {
     let result = menuEl?.querySelector('.shiftia-ctx-result');
     if (!result) {
       result = document.createElement('div');
       result.className = 'shiftia-ctx-result';
       menuEl?.appendChild(result);
     }
+    return result;
+  }
+
+  function showErr(result, msg) {
+    result.innerHTML = `<span class="shiftia-ctx-err">${escapeHtml(msg || 'Error inesperado')}</span>`;
+  }
+
+  async function runAction(actionId, cell) {
+    const result = ensureResultEl();
+    if (actionId === 'syncCellChange') return syncCellFlow(cell, result);
     result.textContent = 'Consultando…';
     const res = await chrome.runtime.sendMessage({
       type: 'shiftia:askEngine',
       payload: { action: actionId, args: cell }
     }).catch((e) => ({ ok: false, error: e.message }));
     if (!res?.ok) {
-      result.innerHTML = `<span class="shiftia-ctx-err">${escapeHtml(res?.error || 'Error inesperado')}</span>`;
+      showErr(result, res?.error);
       return;
     }
     result.innerHTML = formatResult(res.data);
+  }
+
+  // ====== Volcar UNA celda de Actais a la planilla de Shiftia ======
+  // Dos pasos SIEMPRE: primero el backend compara (preview) y se muestra el
+  // diff «planilla → Actais»; solo al confirmar se guarda (con versión en el
+  // historial). Actais no se modifica nunca.
+  async function syncCellFlow(cell, result) {
+    if (cell.day == null || cell.month == null || !cell.year) {
+      return showErr(result, 'No identifico la fecha de esta celda.');
+    }
+    if (!cell.shift) {
+      return showErr(result,
+        'No reconozco el turno de esta celda' +
+        (cell.rawClass ? ` (clase ${cell.rawClass} sin mapear)` : '') +
+        '. Anótalo para añadirlo al mapa de códigos.');
+    }
+    result.textContent = 'Comparando con la planilla guardada…';
+    const payload = {
+      actaisId: cell.workerId,
+      workerName: detectWorkerName(),
+      year: cell.year,
+      month: cell.month + 1, // Actais/extensión 0-based → backend 1-based
+      changes: [{ day: cell.day, to: cell.shift }]
+    };
+    const prev = await chrome.runtime.sendMessage({ type: 'shiftia:syncPreview', payload })
+      .catch((e) => ({ ok: false, error: e.message }));
+    if (!prev?.ok) return showErr(result, prev?.error);
+    const d = prev.data;
+    if (d.identical || !(d.changes || []).length) {
+      result.innerHTML = '✅ Ya coincide: la planilla guardada tiene lo mismo que Actais.';
+      return;
+    }
+    const ch = d.changes[0];
+    result.innerHTML =
+      `<div>Día ${ch.day + 1} · ${escapeHtml(d.worker.name)}<br>` +
+      `Planilla: <b>${escapeHtml(ch.from || '∅')}</b> → Actais: <b>${escapeHtml(ch.to || '∅')}</b></div>`;
+    const btn = document.createElement('button');
+    btn.className = 'shiftia-ctx-btn shiftia-ctx-btn-sync';
+    btn.textContent = '✅ Confirmar volcado a Shiftia';
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.textContent = 'Guardando…';
+      const res = await chrome.runtime.sendMessage({
+        type: 'shiftia:syncApply',
+        payload: { workerId: d.worker.id, actaisId: cell.workerId, changes: d.changes }
+      }).catch((e) => ({ ok: false, error: e.message }));
+      if (!res?.ok) return showErr(result, res?.error);
+      result.innerHTML = '✅ Guardado en la planilla de Shiftia (Actais no se toca). ' +
+        'Queda registrado en el historial del panel.';
+    });
+    result.appendChild(btn);
   }
 
   function formatResult(data) {
