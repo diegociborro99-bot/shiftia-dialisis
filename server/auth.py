@@ -10,9 +10,9 @@ import os
 
 import jwt
 
-USER = "NOEMONTS"
-# sha256("NOEMONTS:Labfhj23ñ")
-PASS_HASH = "071daa6e69ebc88173596087e7bcc97469279cdb380188ab05e7efa91d5231c7"
+USER = "NMONT"
+# sha256("NMONT:Dialisis2026ñ-")
+PASS_HASH = "d7ad325e5591b6dafc22ce9a5c8cb1fca8d36b72092676a4154054c47f6463c2"
 
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-cambiar-en-railway")
 JWT_ALG = "HS256"

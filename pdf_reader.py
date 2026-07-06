@@ -50,7 +50,10 @@ def parse_planilla(path):
                         sched[int(cell) - 1] = (codes[col] or "").strip() or "D"
                 hrs = next((v for c in reversed(codes)
                             if (v := _to_hours(c)) is not None and v > 40), None)
-                workers[name] = {"schedule": sched, "hours": hrs}
+                # "pista" de rol: todo el texto del bloque hasta la fila de días
+                # (cabecera de sección/categoría: DUE, TCAE/AUXILIAR, SUPERVISORA…).
+                hint = " ".join((c or "") for row in t[:ni + 1] for c in row)
+                workers[name] = {"schedule": sched, "hours": hrs, "hint": hint}
             # leyenda (mapa de códigos del propio PDF)
             for line in (page.extract_text() or "").splitlines():
                 m = _LEG.match(line.strip())

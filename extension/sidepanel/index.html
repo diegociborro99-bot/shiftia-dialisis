@@ -144,6 +144,17 @@ table.cal{border-collapse:separate;border-spacing:0;font-size:.62rem}
     <button id="logout" class="logout hidden" title="Cerrar sesión">⎋</button>
   </header>
 
+  <div id="syncCard" class="card hidden" style="margin-bottom:12px">
+    <h3>🔄 Sincronizar desde Actais</h3>
+    <div style="padding:12px">
+      <div class="q-label">Planilla destino</div>
+      <select id="syncTarget" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:.82rem;background:var(--bg-card)"></select>
+      <button class="btn primary" id="syncBtn" style="margin-top:9px;width:100%">📥 Volcar el empleado de la pantalla</button>
+      <div class="q-label" style="margin-top:8px">Lee el mes del trabajador abierto en Actais y lo guarda en la planilla elegida.</div>
+      <div id="syncOut"></div>
+    </div>
+  </div>
+
   <div id="empty" class="hidden">
     <label class="drop" id="drop">
       <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
@@ -205,11 +216,11 @@ async function boot(){
   const st=await chrome.storage.local.get(['engineUrl','shiftiaToken']);
   BASE=(st.engineUrl||'').replace(/\/+$/,''); TOKEN=st.shiftiaToken||'';
   $('#lurl').value=BASE;
-  if(BASE&&TOKEN){ $('#login').classList.add('hidden'); $('#logout').classList.remove('hidden'); ping(); loadData(); }
+  if(BASE&&TOKEN){ $('#login').classList.add('hidden'); $('#logout').classList.remove('hidden'); $('#syncCard').classList.remove('hidden'); ping(); loadData(); loadTargets(); }
   else showLogin();
 }
 function showLogin(err){
-  $('#login').classList.remove('hidden'); $('#loaded').classList.add('hidden'); $('#empty').classList.add('hidden'); $('#logout').classList.add('hidden');
+  $('#login').classList.remove('hidden'); $('#loaded').classList.add('hidden'); $('#empty').classList.add('hidden'); $('#logout').classList.add('hidden'); $('#syncCard').classList.add('hidden');
   if(err){$('#lerr').textContent=err;$('#lerr').classList.remove('hidden');}
 }
 async function doLogin(){
@@ -223,8 +234,8 @@ async function doLogin(){
     const {token}=await r.json();
     BASE=base; TOKEN=token;
     await chrome.storage.local.set({engineUrl:base, shiftiaToken:token});
-    $('#login').classList.add('hidden'); $('#logout').classList.remove('hidden');
-    ping(); loadData();
+    $('#login').classList.add('hidden'); $('#logout').classList.remove('hidden'); $('#syncCard').classList.remove('hidden');
+    ping(); loadData(); loadTargets();
   }catch(e){
     $('#lerr').textContent=(e.message==='Failed to fetch')?'No conecto con esa URL':e.message;
     $('#lerr').classList.remove('hidden');
@@ -353,6 +364,51 @@ function showCover(q,res){
   }
   $('#advisor').innerHTML=html;
 }
+
+/* ---------- sincronización con Actais (Actais → Shiftia) ---------- */
+function syncOut(html){$('#syncOut').innerHTML=html?`<div style="margin-top:9px;font-size:.8rem;color:var(--text2)">${html}</div>`:'';}
+async function loadTargets(){
+  try{
+    const r=await api('/api/planillas'); const d=await r.json();
+    const ps=(d&&d.planillas)||[]; const sel=$('#syncTarget');
+    if(!ps.length){sel.innerHTML='<option value="">— crea una planilla en la web —</option>';return;}
+    sel.innerHTML=ps.map(p=>`<option value="${p.id}">${p.name||p.id} · ${p.month?String(p.month).padStart(2,'0'):'--'}/${p.year||''}</option>`).join('');
+  }catch(e){/* 401 gestionado en api() */}
+}
+async function scrapeActais(){
+  let tab;
+  try{[tab]=await chrome.tabs.query({active:true,currentWindow:true});}catch(e){}
+  if(!tab||!tab.id)throw new Error('No hay pestaña activa.');
+  let res;
+  try{res=await chrome.tabs.sendMessage(tab.id,{type:'actais:scrapeMonth'});}
+  catch(e){throw new Error('Abre en Actais el calendario del trabajador (personal.hospitaldejove.com) y reintenta.');}
+  if(!res||!res.ok)throw new Error((res&&res.error)||'No pude leer el calendario en pantalla.');
+  return res;
+}
+async function doSync(){
+  const pid=$('#syncTarget').value;
+  if(!pid){toast('Elige una planilla destino');return;}
+  syncOut('Leyendo la pantalla de Actais…');
+  let a; try{a=await scrapeActais();}catch(e){syncOut('⚠️ '+e.message);return;}
+  const cells={};(a.cells||[]).forEach((code,day)=>{if(code)cells[day]=code;});
+  if(!Object.keys(cells).length){syncOut('⚠️ No leí turnos en la pantalla. Espera a que Actais pinte el mes y reintenta.');return;}
+  const mm=String((a.month||0)+1).padStart(2,'0');
+  syncOut(`Volcando ${a.workerName?('<b>'+a.workerName.split(',')[0]+'</b>'):'el empleado'} (${mm}/${a.year})…`);
+  try{
+    const r=await api('/api/planillas/'+pid+'/sync',{method:'POST',json:{worker_name:a.workerName||'',worker_id:a.workerId||null,cells}});
+    if(!r.ok){const b=await r.json().catch(()=>({}));throw new Error(b.detail||('Error '+r.status));}
+    renderSyncDiff(a,await r.json()); loadTargets();
+  }catch(e){if(e.message!=='401')syncOut('⚠️ '+e.message);}
+}
+function renderSyncDiff(a,d){
+  const changes=d.changes||[]; const who=(d.name||a.workerName||'empleado').split(',')[0];
+  let html=`<div class="verdict ${d.audit&&d.audit.compliant?'yes':'no'}" style="margin-top:9px">${d.created?'➕ Añadido':'✓ Sincronizado'}: ${who}</div>`;
+  if(!changes.length)html+='<div class="reason">Ya estaba igual que Actais: sin cambios.</div>';
+  else html+=`<div class="reason">${changes.length} cambio(s) desde Actais:</div><ul class="blockers">`+changes.slice(0,12).map(c=>`<li>Día ${c.day+1}: ${c.from||'—'} → <b>${c.to}</b></li>`).join('')+'</ul>';
+  if(d.audit)html+=`<div class="reason" style="margin-top:6px">Convenio tras el volcado: <b>${d.audit.compliant?'✅ cumple':'❌ no cumple'}</b></div>`;
+  $('#syncOut').innerHTML=html;
+}
+$('#syncBtn').addEventListener('click',doSync);
 
 boot();
 </script>

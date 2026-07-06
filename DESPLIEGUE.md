@@ -26,7 +26,7 @@ cd shiftia-dialisis
 
 **4. Copia la URL pública** del servicio (algo como `https://shiftia-dialisis-production.up.railway.app`).
 
-**5. En la extensión:** abre el panel (icono de Shiftia) → pega esa **URL del motor**, usuario **NOEMONTS** y la contraseña → **Entrar**. La primera vez, **sube el PDF** de la planilla; queda guardado en la nube.
+**5. En la extensión:** abre el panel (icono de Shiftia) → pega esa **URL del motor**, usuario **NMONT** y la contraseña → **Entrar**. La primera vez, **sube el PDF** de la planilla; queda guardado en la nube.
 
 ## Variables de entorno (resumen)
 

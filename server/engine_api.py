@@ -73,12 +73,35 @@ def unique_id(candidate: str, existing) -> str:
 
 
 # ------------------------------------------------------------- empleados ----
-def _role(name: str) -> str:
-    return "supervisora" if "MONTESERIN" in (name or "").upper() else "enfermera"
+def classify_role(name: str, hint: str = "") -> str:
+    """Categoriza el rol de un empleado (para el volcado de la planificación).
+
+    Usa el nombre + una 'pista' (texto de su bloque en el PDF: cabecera de
+    sección, categoría, etc.). Reglas, en orden:
+      - Supervisora: Noelia Monteserín o texto 'supervis'.
+      - Auxiliar (TCAE): 'auxil', 'tcae' o 'aux'.
+      - Enfermera (DUE): 'due', 'enfermer', 'd.u.e'.
+      - Por defecto: enfermera (la hoja base de la unidad es de enfermería).
+    """
+    t = f"{name} {hint}".upper()
+    if "MONTESERIN" in t or "SUPERVIS" in t:
+        return "supervisora"
+    if "AUXIL" in t or "TCAE" in t or re.search(r"\bAUX\b", t):
+        return "auxiliar"
+    if "DUE" in t or "ENFERMER" in t or "D.U.E" in t:
+        return "enfermera"
+    return "enfermera"
 
 
 def _allowed(role: str):
     return ["M7H", "M"] if role == "supervisora" else ["MT"]
+
+
+def _role_of(p: dict, wid: str):
+    for w in p["workers"]:
+        if w["id"] == wid:
+            return w.get("role")
+    return None
 
 
 # ----------------------------------------------------------- planillas ------
@@ -99,7 +122,7 @@ def planilla_from_pdf(raw: bytes, year: int, month: int) -> dict:
         os.unlink(path)
     workers = []
     for name, w in data["workers"].items():
-        role = _role(name)
+        role = classify_role(name, w.get("hint", ""))
         workers.append({"id": slug(name), "name": name, "role": role,
                         "hours": w["hours"],
                         "schedule": {str(d): c for d, c in w["schedule"].items()}})
@@ -177,7 +200,9 @@ def sync_worker_month(p: dict, worker_name, cells: dict, worker_id=None,
         w = next((x for x in p["workers"] if x["id"] == rid), None)
     created = False
     if w is None:
-        w = add_worker(p, worker_name or "SIN NOMBRE", role or "enfermera", hours)
+        # rol: el que venga, o auto-clasificado por nombre (Monteserín→supervisora, etc.)
+        wrole = role if (role in ROLES) else classify_role(worker_name or "")
+        w = add_worker(p, worker_name or "SIN NOMBRE", wrole, hours)
         created = True
 
     changes = []
@@ -272,6 +297,9 @@ def data_response(p: dict) -> dict:
             "audit": audit_json(p)}
 
 
+_SUP_FIJA = "La supervisora tiene mañanas fijas: no entra en cambios ni coberturas del pool de 12 h."
+
+
 def answer(p: dict, action: str, cell: dict) -> dict:
     prob, sched = build_problem(p)
     if action in ("validateConvenio", "validar", "audit"):
@@ -279,9 +307,16 @@ def answer(p: dict, action: str, cell: dict) -> dict:
     if action in ("cambio", "swap"):
         a = resolve(p, cell.get("worker_a") or cell.get("name_a"))
         b = resolve(p, cell.get("worker_b") or cell.get("name_b"))
+        if _role_of(p, a) == "supervisora" or _role_of(p, b) == "supervisora":
+            return {"ok": False, "reason": _SUP_FIJA, "blockers": []}
         return can_swap(prob, sched, a, int(cell["day_a"]), b, int(cell["day_b"]))
     wid = resolve(p, cell.get("worker") or cell.get("worker_name") or cell.get("worker_id"))
     day = int(cell.get("day"))
+    if _role_of(p, wid) == "supervisora":
+        # Noelia (supervisora) no libra del pool ni la cubre el pool de enfermería.
+        if action in ("whoCovers", "cover", "vacaciones"):
+            return {"detail": "La supervisora no se cubre con el pool de enfermería/auxiliares."}
+        return {"ok": False, "reason": _SUP_FIJA}
     if action in ("librar", "release"):
         return can_release(prob, sched, wid, day)
     if action in ("whoCovers", "cover", "vacaciones"):

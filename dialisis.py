@@ -24,10 +24,15 @@ from shiftiacore import (Problem, Rule, ShiftType, SolveConfig, Worker, solve,
 
 def shifts():
     return [
-        ShiftType("MT", "Mañana 07:30–19:00 sin pausa", hours=11.5, start="07:30", end="19:00"),
-        ShiftType("M7H", "Mañana 07:30–14:30", hours=7, start="07:30", end="14:30"),
-        ShiftType("M", "Mañana 08:00–15:00", hours=7, start="08:00", end="15:00"),
+        # Turno de 12 h (enfermería + auxiliares). "de 7 a 7": 07:00–19:00.
+        ShiftType("MT", "Mañana-Tarde 07:00–19:00 (12 h)", hours=12, start="07:00", end="19:00"),
+        # Turnos de la SUPERVISORA (mañanas, no 12 h).
+        ShiftType("M7H", "Mañana 07:00–14:00", hours=7, start="07:00", end="14:00"),
+        ShiftType("M", "Mañana (supervisora)", hours=7, start="08:00", end="15:00"),
+        # No productivos (no cuentan como turno trabajado ni cubren dotación).
         ShiftType("D", "Descanso", hours=0, is_work=False, is_rest=True),
+        ShiftType("VAC", "Vacaciones", hours=0, is_work=False),
+        ShiftType("CJ", "Cómputo de jornada", hours=0, is_work=False),
     ]
 
 
