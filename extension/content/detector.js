@@ -59,7 +59,7 @@
     FOR:  { label: 'Formación', category: 'training', hours: 7 },
     HS:   { label: 'Horas Sindicales', category: 'union' },
     HF:   { label: 'Horas Festivas', category: 'work' },
-    INT:  { label: 'Intervención', category: 'work' },
+    INT:  { label: 'Baja laboral', category: 'absence' },
     IQF:  { label: 'IQF', category: 'work' },
     G17:  { label: 'Guardia 17h', category: 'guard', suffix: true },
     G24:  { label: 'Guardia 24h', category: 'guard', suffix: true }

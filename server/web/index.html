@@ -209,6 +209,7 @@ table.cal{border-collapse:separate;border-spacing:0;font-size:.64rem}
       <div class="pagehead">
         <div><h2>Mis planillas</h2><div class="sub" id="listSub">…</div></div>
         <div class="spacer"></div>
+        <label class="btn" style="cursor:pointer">📅 Importar planificación anual<input type="file" id="annualInput" accept="application/pdf" multiple class="hidden"></label>
         <button class="btn primary" id="newBtn">＋ Nueva planilla</button>
       </div>
       <div class="grid" id="cards"></div>
@@ -286,7 +287,7 @@ table.cal{border-collapse:separate;border-spacing:0;font-size:.64rem}
 const $=s=>document.querySelector(s);
 const DOW=['D','L','M','X','J','V','S'];
 const MONTHS=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-const EDIT_CODES=['MT','M','M7H','D','VAC','CJ','L','BAJ','LAC','G17','G24','FN'];
+const EDIT_CODES=['MT','M','M7H','D','VAC','CJ','INT','BAJ','LAC','L','G17','G24'];
 const ROLE_LABEL={enfermera:'Enfermera',auxiliar:'Auxiliar',supervisora:'Supervisora'};
 let TOKEN=localStorage.getItem('shiftiaToken')||'';
 let CUR=null, swapSel=null, ID2NAME={};
@@ -361,6 +362,17 @@ function fillMonthSelect(sel,val){sel.innerHTML=MONTHS.map((m,i)=>`<option value
 $('#newBtn').addEventListener('click',()=>{const now=new Date();$('#mName').value='';fillMonthSelect($('#mMonth'),now.getMonth()+1);$('#mYear').value=now.getFullYear();$('#modal').classList.remove('hidden');$('#mName').focus();});
 $('#mCancel').addEventListener('click',()=>$('#modal').classList.add('hidden'));
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')$('#modal').classList.add('hidden');});
+$('#annualInput').addEventListener('change',async e=>{
+  const files=[...e.target.files]; if(!files.length)return;
+  toast('Leyendo la planificación anual…');
+  const form=new FormData(); files.forEach(f=>form.append('files',f,f.name));
+  try{
+    const d=await api('/api/import/annual',{method:'POST',form});
+    toast(`Importados ${d.employees} empleado(s) en ${d.planillas} mes(es)`);
+    loadList();
+  }catch(err){toast('Error al importar: '+err.message);}
+  e.target.value='';
+});
 $('#mCreate').addEventListener('click',async()=>{
   const name=$('#mName').value.trim()||'Planilla sin nombre';
   const year=+$('#mYear').value||2026,month=+$('#mMonth').value||1;

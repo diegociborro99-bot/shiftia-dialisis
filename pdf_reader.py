@@ -62,6 +62,58 @@ def parse_planilla(path):
     return {"workers": workers, "legend": legend}
 
 
+_MESES = {"enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5,
+          "junio": 6, "julio": 7, "agosto": 8, "septiembre": 9, "octubre": 10,
+          "noviembre": 11, "diciembre": 12}
+_NUM = re.compile(r"^\d+(?:[.,]\d+)?$")
+
+
+def parse_annual(path):
+    """Lee una PLANIFICACIÓN ANUAL de Actais (informe por trabajador).
+
+    Cada trabajador ocupa varias páginas; la PRIMERA es un calendario anual:
+        NOMBRE APELLIDOS 2026
+        SANITARIO - DIALISIS - DUE                ← cabecera con la categoría
+        MES 1 2 3 … 31 Horas
+        <fila de días de la semana>
+        Enero  MT INT D D … MT                     ← un código por día del mes
+        172.50                                     ← horas de ese mes
+        <fila de días> · Febrero … · etc.
+
+    Devuelve una lista de trabajadores:
+        [{name, year, hint, months:{mes:{cells:{dia0based:code}, hours, codes}}}]
+    Las páginas sin filas de mes (cómputo de jornada, resumen legal) se ignoran.
+    """
+    out = []
+    with pdfplumber.open(path) as pdf:
+        for page in pdf.pages:
+            lines = (page.extract_text() or "").splitlines()
+            month_rows = [i for i, ln in enumerate(lines)
+                          if ln.strip().split() and ln.strip().split()[0].lower() in _MESES]
+            if not month_rows:
+                continue                      # no es una página-calendario
+            name_line = lines[0].strip() if lines else ""
+            m = re.search(r"(.+?)\s+(\d{4})\s*$", name_line)
+            name = (m.group(1).strip() if m else name_line)
+            year = int(m.group(2)) if m else None
+            hint = " ".join(lines[:month_rows[0]])     # cabecera (rol/sección)
+            months = {}
+            for i in month_rows:
+                parts = lines[i].strip().split()
+                mes = _MESES[parts[0].lower()]
+                codes = parts[1:]
+                hours = None
+                for j in range(i + 1, min(i + 3, len(lines))):
+                    s = lines[j].strip().replace(",", ".")
+                    if _NUM.match(lines[j].strip()):
+                        hours = float(s)
+                        break
+                months[mes] = {"cells": {d: codes[d] for d in range(len(codes))},
+                               "codes": len(codes), "hours": hours}
+            out.append({"name": name, "year": year, "hint": hint, "months": months})
+    return out
+
+
 if __name__ == "__main__":
     path = sys.argv[1] if len(sys.argv) > 1 else "DIEGO LABORATORIO.pdf"
     data = parse_planilla(path)

@@ -21,7 +21,7 @@
 
   // Códigos de ausencia/incidencia que Actais pone como clase del slot.
   const ABSENCE_CODES = ['VAC', 'VAN', 'VAA', 'BAJ', 'LAC', 'FOR', 'CJ', 'CAA',
-    'DLA', 'HS', 'AE', 'EX', 'PM', 'MTC', 'IT', 'LD'];
+    'DLA', 'HS', 'AE', 'EX', 'PM', 'MTC', 'IT', 'INT', 'LD'];
   const ABSENCE_SET = new Set(ABSENCE_CODES);
 
   function absenceCodeFromCell(slot) {
