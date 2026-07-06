@@ -33,6 +33,7 @@ def shifts():
         ShiftType("D", "Descanso", hours=0, is_work=False, is_rest=True),
         ShiftType("VAC", "Vacaciones", hours=0, is_work=False),
         ShiftType("CJ", "Cómputo de jornada", hours=0, is_work=False),
+        ShiftType("INT", "Baja laboral", hours=0, is_work=False),
     ]
 
 

@@ -235,6 +235,40 @@ def sync_planilla(pid: str, body: dict = Body(...), _claims=Depends(auth)):
     return res
 
 
+# ---------------------------------------- auto-importador de planificación --
+@app.post("/api/import/annual")
+async def import_annual(files: list[UploadFile] = File(...), _claims=Depends(auth)):
+    """Lee una planificación ANUAL (PDF por trabajador), crea los empleados con
+    su categoría y REPARTE los días a la planilla MENSUAL de cada mes/año."""
+    touched: dict[str, dict] = {}          # pid -> planilla (acumula en memoria)
+    created_planillas: set[str] = set()
+    detail = []
+    for f in files:
+        raw = await f.read()
+        for e in E.annual_employees(raw):
+            year = e.get("year")
+            if not year or not e.get("months"):
+                continue
+            months_done = 0
+            for month, mo in e["months"].items():
+                pid = E.monthly_id(year, month)
+                if pid not in touched:
+                    p = load_planilla(pid)
+                    if p is None:
+                        p = E.empty_planilla(pid, E.monthly_name(year, month), year, month)
+                        created_planillas.add(pid)
+                    touched[pid] = p
+                E.upsert_worker_month(touched[pid], e["name"], e["role"],
+                                      mo["cells"], mo.get("hours"))
+                months_done += 1
+            detail.append({"name": e["name"], "role": e["role"],
+                           "year": year, "months": months_done})
+    for p in touched.values():
+        save_planilla(p)
+    return {"ok": True, "employees": len(detail), "planillas": len(touched),
+            "created_planillas": len(created_planillas), "detail": detail[:100]}
+
+
 # ------------------------------------------------------- legacy (extensión) -
 def _default():
     return load_planilla(DEFAULT_ID)

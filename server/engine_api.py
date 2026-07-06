@@ -26,7 +26,7 @@ for _p in (_PARENT,
     if _p and _p not in sys.path:
         sys.path.insert(0, _p)
 
-from pdf_reader import parse_planilla                       # noqa: E402
+from pdf_reader import parse_annual, parse_planilla         # noqa: E402
 from dialisis import _sundays, shifts                       # noqa: E402
 from analyze import dialisis_rules                          # noqa: E402
 from shiftiacore import (Problem, Worker, audit_compliance,  # noqa: E402
@@ -129,6 +129,55 @@ def planilla_from_pdf(raw: bytes, year: int, month: int) -> dict:
     return {"year": int(year), "month": int(month),
             "days": days_in_month(year, month),
             "holidays": holidays_for(year, month), "workers": workers}
+
+
+MES_NOMBRE = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+              "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+
+
+def monthly_id(year: int, month: int) -> str:
+    return f"p_dialisis_{int(year)}_{int(month):02d}"
+
+
+def monthly_name(year: int, month: int) -> str:
+    return f"Diálisis · {MES_NOMBRE[int(month)]} {int(year)}"
+
+
+def annual_employees(raw: bytes):
+    """Parsea una planificación anual y anexa el rol categorizado a cada uno."""
+    fd, path = tempfile.mkstemp(suffix=".pdf")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(raw)
+        emps = parse_annual(path)
+    finally:
+        os.unlink(path)
+    for e in emps:
+        e["role"] = classify_role(e["name"], e.get("hint", ""))
+    return emps
+
+
+def upsert_worker_month(p: dict, name: str, role: str, cells: dict, hours=None) -> bool:
+    """Mete (o actualiza) a un empleado y su horario de UN mes en la planilla.
+    Devuelve True si el empleado no existía y se creó."""
+    wid = resolve(p, name)
+    w = next((x for x in p["workers"] if x["id"] == wid), None)
+    created = False
+    if w is None:
+        w = add_worker(p, name, role if role in ROLES else "enfermera", hours)
+        created = True
+    else:
+        if role in ROLES:
+            w["role"] = role
+        if hours not in (None, ""):
+            try:
+                w["hours"] = float(hours)
+            except (TypeError, ValueError):
+                pass
+    sched = w.setdefault("schedule", {})
+    for d, code in (cells or {}).items():
+        sched[str(int(d))] = (code or "D").strip()
+    return created
 
 
 def merge(existing: dict, new: dict) -> dict:
