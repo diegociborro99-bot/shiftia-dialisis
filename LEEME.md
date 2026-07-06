@@ -21,7 +21,7 @@ Dos piezas:
 
 **Primer uso (Noelia):**
 1. Pulsa el icono de Shiftia → se abre el panel.
-2. Pega la **URL del motor** (la de Railway), usuario **NOEMONTS** y contraseña → Entrar.
+2. Pega la **URL del motor** (la de Railway), usuario **NMONT** y contraseña → Entrar.
 3. Sube el **PDF** de la planilla (se guarda en la nube).
 4. Listo. A partir de aquí solo abre el panel: la planilla ya está.
 

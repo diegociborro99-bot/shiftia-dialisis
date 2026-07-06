@@ -14,7 +14,7 @@ from dialisis import shifts, _sundays
 from shiftiacore import (Problem, Rule, Worker, audit_compliance, can_release,
                          can_swap, cover_catastrophe)
 
-PDF_DEFAULT = "/sessions/gracious-serene-brown/mnt/uploads/DIEGO LABORATORIO.pdf"
+PDF_DEFAULT = "planilla.pdf"   # ruta relativa; pásale la tuya como argumento
 
 
 def load(path, year=2026, month=10):
@@ -32,10 +32,15 @@ def load(path, year=2026, month=10):
 
 
 def dialisis_rules():
-    rota = {"groups": ["enfermera"]}            # la supervisora va aparte
-    reqs = [{"shift": "MT", "skill": "enfermera", "min": 5}]   # sin contar supervisora
+    # Turnos de 12 h: enfermería + auxiliares. La SUPERVISORA va aparte.
+    rota = {"groups": ["enfermera", "auxiliar"]}
+    # Dotación mínima por turno MT (sin contar a la supervisora):
+    #   5 enfermeras + 3 auxiliares. (La usuaria indica 3-4 auxiliares; 3 es el
+    #   suelo duro — ajustable a 4 en este punto si se confirma.)
+    reqs = [{"shift": "MT", "skill": "enfermera", "min": 5},
+            {"shift": "MT", "skill": "auxiliar", "min": 3}]
     return [
-        Rule("skill_coverage", mode="hard", tier=3, id="≥5 enfermeras",
+        Rule("skill_coverage", mode="hard", tier=3, id="5 enfermeras + 3 auxiliares",
              params={"by_daytype": {"weekday": reqs, "weekend": reqs, "holiday": []}},
              citation={"ref": "Dotación mínima de la unidad"}),
         Rule("coverage", mode="hard", tier=3, id="domingos cerrado",
