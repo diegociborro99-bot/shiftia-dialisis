@@ -298,14 +298,15 @@
   });
 
   // ====== Menú contextual flotante ======
+  // Solo acciones realmente implementadas por el backend (server/engine_api.py)
+  // y el service worker (background/sw.js). Las funciones aún no soportadas
+  // (alternativas IA, volcado de cambios) se añadirán cuando el backend las exponga.
   const MENU_ACTIONS = [
     { id: 'librar',           label: '🆓 Librar este día', group: 'ai' },
     { id: 'whoCovers',        label: '👥 ¿Quién cubre?', group: 'ai' },
     { id: 'vacaciones',       label: '🏖️ Marcar vacaciones', group: 'ai' },
     { id: 'cambio',           label: '🔁 Proponer cambio', group: 'ai' },
-    { id: 'validateConvenio', label: '⚖️ Validar convenio', group: 'ai' },
-    { id: 'alternativas',     label: '🧠 Alternativas IA', group: 'ai' },
-    { id: 'syncCellChange',   label: '📥 Volcar cambio sin IA a Shiftia', group: 'sync' }
+    { id: 'validateConvenio', label: '⚖️ Validar convenio', group: 'ai' }
   ];
 
   function closeMenu() {
@@ -344,19 +345,22 @@
       menuEl.appendChild(btn);
     });
 
-    // Separador visual + acción de sincronización sin IA
-    const sep = document.createElement('div');
-    sep.className = 'shiftia-ctx-sep';
-    sep.textContent = 'Sincronización';
-    menuEl.appendChild(sep);
+    // Separador visual + acciones de sincronización sin IA (si las hay)
+    const syncActions = MENU_ACTIONS.filter(a => a.group === 'sync');
+    if (syncActions.length) {
+      const sep = document.createElement('div');
+      sep.className = 'shiftia-ctx-sep';
+      sep.textContent = 'Sincronización';
+      menuEl.appendChild(sep);
 
-    MENU_ACTIONS.filter(a => a.group === 'sync').forEach((act) => {
-      const btn = document.createElement('button');
-      btn.className = 'shiftia-ctx-btn shiftia-ctx-btn-sync';
-      btn.textContent = act.label;
-      btn.addEventListener('click', () => runAction(act.id, cell));
-      menuEl.appendChild(btn);
-    });
+      syncActions.forEach((act) => {
+        const btn = document.createElement('button');
+        btn.className = 'shiftia-ctx-btn shiftia-ctx-btn-sync';
+        btn.textContent = act.label;
+        btn.addEventListener('click', () => runAction(act.id, cell));
+        menuEl.appendChild(btn);
+      });
+    }
 
     const close = document.createElement('button');
     close.className = 'shiftia-ctx-close';

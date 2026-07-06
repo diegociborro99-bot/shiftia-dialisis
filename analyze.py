@@ -14,7 +14,7 @@ from dialisis import shifts, _sundays
 from shiftiacore import (Problem, Rule, Worker, audit_compliance, can_release,
                          can_swap, cover_catastrophe)
 
-PDF_DEFAULT = "/sessions/gracious-serene-brown/mnt/uploads/DIEGO LABORATORIO.pdf"
+PDF_DEFAULT = "planilla.pdf"   # ruta relativa; pásale la tuya como argumento
 
 
 def load(path, year=2026, month=10):

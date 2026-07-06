@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shiftia · Diálisis</title>
+<style>
+:root{
+  --primary:#2980b9; --primary-light:rgba(41,128,185,.08);
+  --accent:#4ecdc4; --gradient:linear-gradient(135deg,#4ecdc4,#2980b9);
+  --bg:#f5f6f8; --bg-card:#fff;
+  --text1:#0f0f0f; --text2:#444; --text3:#8a8f98;
+  --border:#e5e7eb; --border-light:#f0f1f3;
+  --success:#10b981; --success-bg:#ecfdf5;
+  --warning:#f59e0b; --warning-bg:#fffbeb;
+  --error:#ef4444; --error-bg:#fef2f2;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-pill:999px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 12px rgba(0,0,0,.06),0 1px 3px rgba(0,0,0,.04);
+  --shadow-lg:0 8px 30px rgba(0,0,0,.10),0 2px 8px rgba(0,0,0,.05);
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text1);font-size:14px;line-height:1.5}
+.hidden{display:none!important}
+button{font-family:inherit;cursor:pointer}
+a{color:var(--primary)}
+
+/* shell */
+.topbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:12px 20px}
+.mark{width:34px;height:34px;border-radius:10px;background:var(--gradient);display:grid;place-items:center;box-shadow:var(--shadow-md);flex-shrink:0}
+.mark svg{width:19px;height:19px}
+.brand h1{font-size:1rem;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.brand p{font-size:.72rem;color:var(--text3);font-weight:500}
+.spacer{flex:1}
+.status{display:flex;align-items:center;gap:6px;font-size:.72rem;font-weight:600;color:var(--text3)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--text3)}
+.dot.up{background:var(--success)} .dot.down{background:var(--error)}
+.wrap{max-width:1120px;margin:0 auto;padding:20px}
+
+/* buttons */
+.btn{padding:9px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-card);font-size:.82rem;font-weight:600;color:var(--text2);transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--primary);color:var(--primary)}
+.btn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn.primary:hover{background:#1f6d9e;color:#fff}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.danger:hover{border-color:var(--error);color:var(--error);background:var(--error-bg)}
+.btn.sm{padding:5px 9px;font-size:.75rem}
+
+/* cards grid */
+.pagehead{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.pagehead h2{font-size:1.15rem;font-weight:700;letter-spacing:-.02em}
+.pagehead .sub{font-size:.8rem;color:var(--text3)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.pcard{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);padding:16px;cursor:pointer;transition:all .18s var(--ease);position:relative}
+.pcard:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);border-color:var(--border)}
+.pcard .pmonth{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--primary)}
+.pcard h3{font-size:1rem;font-weight:700;margin:3px 0 10px;letter-spacing:-.01em}
+.pcard .meta{display:flex;align-items:center;gap:10px;font-size:.76rem;color:var(--text3)}
+.pcard .chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:var(--radius-pill);font-size:.72rem;font-weight:600}
+.chip.ok{background:var(--success-bg);color:var(--success)} .chip.bad{background:var(--error-bg);color:var(--error)} .chip.mut{background:var(--bg);color:var(--text3)}
+.pcard .upd{margin-top:10px;font-size:.68rem;color:var(--text3)}
+.pcard .del{position:absolute;top:10px;right:10px;opacity:0;color:var(--text3);border:none;background:none;font-size:1rem;padding:3px 6px;border-radius:6px;transition:all .15s}
+.pcard:hover .del{opacity:1}
+.pcard .del:hover{background:var(--error-bg);color:var(--error)}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty-state .ico{width:56px;height:56px;border-radius:16px;background:var(--primary-light);color:var(--primary);display:grid;place-items:center;margin:0 auto 14px}
+
+/* detail */
+.backrow{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.titleedit{font-size:1.2rem;font-weight:700;letter-spacing:-.02em;border:1px solid transparent;border-radius:8px;padding:3px 8px;background:transparent;min-width:200px}
+.titleedit:hover{border-color:var(--border-light)}
+.titleedit:focus{outline:2px solid var(--primary);border-color:var(--primary);background:#fff}
+select,input[type=number],input[type=text]{font-family:inherit;font-size:.82rem;border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 9px;background:var(--bg-card)}
+select:focus,input:focus{outline:2px solid var(--primary);outline-offset:0;border-color:var(--primary)}
+.banner{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--radius-md);margin-bottom:14px;box-shadow:var(--shadow-sm)}
+.banner.ok{background:var(--success-bg);border:1px solid #a7f3d0}
+.banner.bad{background:var(--error-bg);border:1px solid #fecaca}
+.banner .badge{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex-shrink:0;color:#fff}
+.banner.ok .badge{background:var(--success)} .banner.bad .badge{background:var(--error)}
+.banner .big{font-size:1.05rem;font-weight:800;letter-spacing:-.02em}
+.banner.ok .big{color:var(--success)} .banner.bad .big{color:var(--error)}
+.banner .sub{font-size:.76rem;color:var(--text2)}
+
+.cols{display:grid;grid-template-columns:1fr;gap:14px}
+.card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);margin-bottom:14px}
+.card > h3{font-size:.9rem;font-weight:700;padding:12px 16px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:8px}
+.card > h3 .r{margin-left:auto;font-weight:500;font-size:.74rem;color:var(--text3)}
+.checks{list-style:none;padding:6px 16px 12px}
+.checks li{display:flex;gap:8px;padding:7px 0;font-size:.82rem;border-bottom:1px solid var(--border-light)}
+.checks li:last-child{border-bottom:0}
+.checks .ck{font-weight:800;flex-shrink:0}
+.checks .ck.ok{color:var(--success)} .checks .ck.bad{color:var(--error)}
+.checks .cite{color:var(--text3);font-size:.72rem}
+.checks .iss{color:var(--error);font-size:.74rem;margin-top:2px}
+
+/* employees table */
+.emp{width:100%;border-collapse:collapse;font-size:.82rem}
+.emp th{text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);font-weight:700;padding:8px 14px;border-bottom:1px solid var(--border-light)}
+.emp td{padding:6px 14px;border-bottom:1px solid var(--border-light)}
+.emp tr:last-child td{border-bottom:0}
+.emp input[type=text]{width:100%;border-color:transparent;background:transparent}
+.emp input[type=text]:hover{border-color:var(--border-light)}
+.emp input[type=number]{width:80px}
+.emp .role-e{color:var(--primary)} .emp .role-a{color:#8b5cf6} .emp .role-s{color:var(--accent)}
+.emp .x{color:var(--text3);border:none;background:none;font-size:1rem;padding:2px 6px;border-radius:6px}
+.emp .x:hover{background:var(--error-bg);color:var(--error)}
+.addrow{display:flex;gap:8px;padding:10px 14px;flex-wrap:wrap;align-items:center;border-top:1px solid var(--border-light)}
+
+/* calendar */
+.calwrap{overflow-x:auto;padding:10px}
+table.cal{border-collapse:separate;border-spacing:0;font-size:.64rem}
+.cal th,.cal td{text-align:center;white-space:nowrap}
+.cal thead th{padding:3px 0;color:var(--text3);font-weight:600}
+.cal thead th.sun{color:var(--error)}
+.cal thead th .dn{font-size:.74rem;color:var(--text2);font-weight:700;display:block}
+.cal .wname{text-align:left;position:sticky;left:0;background:var(--bg-card);padding:3px 8px 3px 6px;font-weight:600;font-size:.7rem;min-width:150px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;z-index:1;border-right:1px solid var(--border-light)}
+.cal td.cell{width:25px;height:25px;border:1px solid var(--border-light);border-radius:5px;font-weight:700;color:#fff;cursor:pointer}
+.cal td.cell:hover{transform:scale(1.2);box-shadow:var(--shadow-md);position:relative;z-index:2}
+.cal td.cell.sel{outline:2px solid var(--warning);outline-offset:-1px}
+.c-mt{background:var(--primary)} .c-m{background:var(--accent)} .c-rest{background:#cbd2d9;color:#5b6573!important}
+.c-abs{background:var(--warning)} .c-guard{background:#8b5cf6} .c-empty{background:#fafafa;color:#c7ccd3!important}
+.legend{display:flex;flex-wrap:wrap;gap:10px;padding:0 16px 14px}
+.legend span{display:flex;align-items:center;gap:5px;font-size:.7rem;color:var(--text2)}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+.advisor .body{padding:14px 16px}
+.empty-adv{text-align:center;color:var(--text3);padding:16px 10px;font-size:.82rem}
+.verdict{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:.9rem;padding:5px 12px;border-radius:var(--radius-pill);margin-bottom:10px}
+.verdict.yes{background:var(--success-bg);color:var(--success)} .verdict.no{background:var(--error-bg);color:var(--error)}
+.q-label{font-size:.74rem;color:var(--text3);font-weight:600;margin-bottom:5px}
+.reason{font-size:.84rem;color:var(--text2);margin-bottom:10px}
+.blockers,.cands{list-style:none;display:flex;flex-direction:column;gap:5px}
+.blockers li{background:var(--error-bg);border-left:3px solid var(--error);padding:7px 9px;border-radius:6px;font-size:.78rem;color:var(--text2)}
+.cands{margin-top:6px}
+.cands li{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border-light);border-radius:var(--radius-sm);padding:6px 9px;font-size:.8rem}
+.cands .av{width:24px;height:24px;border-radius:50%;background:var(--gradient);color:#fff;display:grid;place-items:center;font-size:.66rem;font-weight:700;flex-shrink:0}
+.gap-h{font-size:.8rem;font-weight:600;margin:10px 0 4px}
+.nores{font-size:.78rem;color:#92400e;background:var(--warning-bg);padding:7px 9px;border-radius:6px;border-left:3px solid var(--warning)}
+.spin{width:20px;height:20px;border:2.5px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:sp .7s linear infinite;margin:14px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* popover (cell) */
+.pop{position:fixed;z-index:60;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);padding:8px;min-width:210px;animation:pop .16s var(--ease)}
+@keyframes pop{from{opacity:0;transform:translateY(-5px) scale(.97)}to{opacity:1;transform:none}}
+.pop .ph{font-size:.7rem;color:var(--text3);font-weight:600;padding:3px 6px 7px}
+.pop .sec{font-size:.66rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text3);font-weight:700;padding:6px 6px 4px}
+.codegrid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:2px 4px 6px}
+.codegrid button{border:1px solid var(--border);border-radius:6px;padding:6px 0;font-size:.72rem;font-weight:700;background:var(--bg-card)}
+.codegrid button:hover{border-color:var(--primary);color:var(--primary)}
+.pop .act{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:none;border-radius:var(--radius-sm);padding:8px 9px;font-size:.82rem;color:var(--text1)}
+.pop .act:hover{background:var(--primary-light)}
+.pop .act.on{color:var(--warning);font-weight:600}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(15,15,15,.4);display:grid;place-items:center;z-index:100;padding:20px}
+.modal{background:var(--bg-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:100%;max-width:380px;padding:22px}
+.modal h3{font-size:1.05rem;font-weight:700;margin-bottom:4px}
+.modal p{font-size:.78rem;color:var(--text3);margin-bottom:16px}
+.modal label{display:block;font-size:.72rem;font-weight:600;color:var(--text2);margin:10px 0 4px}
+.modal input,.modal select{width:100%}
+.modal .row{display:flex;gap:10px}
+.modal .row > div{flex:1}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+
+/* login */
+.login-screen{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;z-index:200;padding:18px}
+.login-card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:18px;box-shadow:var(--shadow-lg);padding:30px 24px;text-align:center;width:100%;max-width:320px}
+.login-card .mark{margin:0 auto 16px}
+.login-card h2{font-size:1.1rem;font-weight:700;letter-spacing:-.02em}
+.login-card p{font-size:.78rem;color:var(--text3);margin-bottom:18px}
+.login-card input{width:100%;padding:11px 12px;margin-bottom:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.86rem;background:var(--bg)}
+.login-card button{width:100%;padding:11px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);font-size:.88rem;font-weight:600}
+.login-card button:hover{background:#1f6d9e}
+.lerr{color:var(--error);font-size:.78rem;margin-top:10px}
+
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--text1);color:#fff;padding:9px 16px;border-radius:var(--radius-pill);font-size:.8rem;box-shadow:var(--shadow-lg);opacity:0;transition:opacity .2s;z-index:150;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login-screen">
+  <div class="login-card">
+    <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg></div>
+    <h2>Shiftia · Diálisis</h2>
+    <p>Acceso de la supervisora</p>
+    <input id="luser" placeholder="Usuario" autocomplete="username" autocapitalize="off">
+    <input id="lpass" type="password" placeholder="Contraseña" autocomplete="current-password">
+    <button id="lbtn">Entrar</button>
+    <div id="lerr" class="lerr hidden"></div>
+  </div>
+</div>
+
+<!-- SHELL -->
+<div id="app" class="hidden">
+  <div class="topbar">
+    <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg></div>
+    <div class="brand"><h1>Shiftia · Diálisis</h1><p>Planillas de la unidad</p></div>
+    <div class="spacer"></div>
+    <div class="status"><span class="dot up" id="dot"></span><span id="statusTxt">Motor conectado</span></div>
+    <button class="btn ghost sm" id="logout" title="Cerrar sesión">Salir</button>
+  </div>
+  <div class="wrap">
+    <!-- LIST -->
+    <div id="listView">
+      <div class="pagehead">
+        <div><h2>Mis planillas</h2><div class="sub" id="listSub">…</div></div>
+        <div class="spacer"></div>
+        <button class="btn primary" id="newBtn">＋ Nueva planilla</button>
+      </div>
+      <div class="grid" id="cards"></div>
+    </div>
+
+    <!-- DETAIL -->
+    <div id="detailView" class="hidden">
+      <div class="backrow">
+        <button class="btn ghost sm" id="backBtn">‹ Volver</button>
+        <input class="titleedit" id="pName" placeholder="Nombre de la planilla">
+        <select id="pMonth"></select>
+        <input type="number" id="pYear" style="width:88px" min="2020" max="2035">
+        <div class="spacer"></div>
+        <label class="btn sm" style="cursor:pointer">＋ Subir PDF<input type="file" id="pdfInput" accept="application/pdf" multiple class="hidden"></label>
+        <button class="btn sm danger" id="delBtn">🗑 Borrar</button>
+      </div>
+
+      <div id="banner" class="banner"></div>
+
+      <div class="card">
+        <h3>👥 Empleados y parámetros <span class="r" id="empCount"></span></h3>
+        <table class="emp"><thead><tr><th>Nombre</th><th style="width:150px">Rol</th><th style="width:110px">Horas/mes</th><th style="width:40px"></th></tr></thead><tbody id="empBody"></tbody></table>
+        <div class="addrow">
+          <input type="text" id="newName" placeholder="APELLIDOS, Nombre" style="flex:1;min-width:160px">
+          <select id="newRole"><option value="enfermera">Enfermera</option><option value="auxiliar">Auxiliar</option><option value="supervisora">Supervisora</option></select>
+          <input type="number" id="newHours" placeholder="Horas" style="width:90px">
+          <button class="btn primary sm" id="addEmpBtn">Añadir</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>📅 Horario del mes <span class="r">clic en un día para editar el turno o preguntar</span></h3>
+        <div class="calwrap"><table class="cal" id="cal"></table></div>
+        <div class="legend">
+          <span><i class="c-mt"></i>MT 12h</span><span><i class="c-m"></i>Mañana sup.</span>
+          <span><i class="c-rest"></i>Descanso</span><span><i class="c-abs"></i>Ausencia</span>
+          <span><i class="c-guard"></i>Guardia</span>
+        </div>
+      </div>
+
+      <div class="card advisor">
+        <h3>🧠 Consejero</h3>
+        <div class="body" id="advisor"><div class="empty-adv">Haz clic en un día y elige «¿Puede librar?» o «¿Quién cubre?».</div></div>
+      </div>
+
+      <div class="checkcard card">
+        <h3>⚖️ Auditoría de convenio</h3>
+        <ul class="checks" id="checks"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL nueva planilla -->
+<div id="modal" class="overlay hidden">
+  <div class="modal">
+    <h3>Nueva planilla</h3>
+    <p>Ponle un nombre y el mes. Luego añades empleados o subes el PDF de Actais.</p>
+    <label>Nombre</label>
+    <input type="text" id="mName" placeholder="Ej. Diálisis · Octubre 2026">
+    <div class="row">
+      <div><label>Mes</label><select id="mMonth"></select></div>
+      <div><label>Año</label><input type="number" id="mYear" min="2020" max="2035"></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="mCancel">Cancelar</button>
+      <button class="btn primary" id="mCreate">Crear</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const DOW=['D','L','M','X','J','V','S'];
+const MONTHS=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const EDIT_CODES=['MT','M7H','M','D','L','VAC','BAJ','LAC','G17','G24','LD','FN'];
+const ROLE_LABEL={enfermera:'Enfermera',auxiliar:'Auxiliar',supervisora:'Supervisora'};
+let TOKEN=localStorage.getItem('shiftiaToken')||'';
+let CUR=null, swapSel=null, ID2NAME={};
+
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);}
+function initials(n){const p=(n||'').replace(/,/g,'').split(/\s+/).filter(Boolean);return((p[0]||'?')[0]+(p[1]||'')[0]||'').toUpperCase();}
+function sur(n){return (n||'').split(',')[0].trim();}
+function humanize(t){if(!t)return t;Object.keys(ID2NAME).forEach(id=>{t=t.replace(new RegExp(id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),ID2NAME[id]);});return t;}
+function codeClass(c){if(!c)return'c-empty';if(c==='MT')return'c-mt';if(/^M/.test(c))return'c-m';if(['D','L','LD','FN'].includes(c))return'c-rest';if(/^G\d/.test(c))return'c-guard';return'c-abs';}
+
+async function api(path,{method='GET',json,form}={}){
+  const h={'Authorization':'Bearer '+TOKEN};
+  let body;
+  if(json){h['Content-Type']='application/json';body=JSON.stringify(json);}
+  if(form)body=form;
+  const r=await fetch(path,{method,headers:h,body});
+  if(r.status===401){TOKEN='';localStorage.removeItem('shiftiaToken');showLogin('Sesión caducada, entra de nuevo.');throw new Error('401');}
+  if(!r.ok){let m='Error '+r.status;try{const b=await r.json();if(b.detail)m=b.detail;}catch(_){}throw new Error(m);}
+  return r.json();
+}
+
+/* ---------- sesión ---------- */
+function showLogin(err){$('#app').classList.add('hidden');$('#login').classList.remove('hidden');if(err){$('#lerr').textContent=err;$('#lerr').classList.remove('hidden');}}
+function showApp(){$('#login').classList.add('hidden');$('#app').classList.remove('hidden');}
+async function doLogin(){
+  const user=$('#luser').value.trim(),password=$('#lpass').value;
+  $('#lerr').classList.add('hidden');$('#lbtn').textContent='Entrando…';
+  try{
+    const d=await(await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user,password})}).then(async r=>{if(!r.ok){const b=await r.json().catch(()=>({}));throw new Error(b.detail||('Error '+r.status));}return r;})).json();
+    TOKEN=d.token;localStorage.setItem('shiftiaToken',TOKEN);showApp();loadList();
+  }catch(e){$('#lerr').textContent=e.message==='Failed to fetch'?'No conecto con el servidor':e.message;$('#lerr').classList.remove('hidden');}
+  finally{$('#lbtn').textContent='Entrar';}
+}
+$('#lbtn').addEventListener('click',doLogin);
+$('#lpass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+$('#logout').addEventListener('click',()=>{localStorage.removeItem('shiftiaToken');TOKEN='';showLogin();});
+
+/* ---------- lista de planillas ---------- */
+async function loadList(){
+  try{
+    const d=await api('/api/planillas');
+    const ps=d.planillas||[];
+    $('#listSub').textContent=ps.length?`${ps.length} planilla${ps.length>1?'s':''} guardada${ps.length>1?'s':''}`:'Aún no hay ninguna. Crea la primera.';
+    if(!ps.length){
+      $('#cards').innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="ico"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>Todavía no tienes planillas.<br>Pulsa <b>＋ Nueva planilla</b> para empezar.</div>`;
+      return;
+    }
+    $('#cards').innerHTML=ps.map(p=>{
+      const chip=p.compliant===true?'<span class="chip ok">✓ Cumple</span>':p.compliant===false?'<span class="chip bad">✗ No cumple</span>':'<span class="chip mut">— sin datos</span>';
+      const upd=p.updatedAt?new Date(p.updatedAt+'Z').toLocaleString('es-ES',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+      return `<div class="pcard" data-id="${p.id}">
+        <button class="del" data-del="${p.id}" title="Borrar">🗑</button>
+        <div class="pmonth">${p.month?MONTHS[p.month-1]:''} ${p.year||''}</div>
+        <h3>${esc(p.name||'Sin nombre')}</h3>
+        <div class="meta"><span>${p.workers||0} empleado${p.workers===1?'':'s'}</span>${chip}</div>
+        <div class="upd">Actualizada ${upd}</div>
+      </div>`;
+    }).join('');
+    $('#cards').querySelectorAll('.pcard').forEach(c=>c.addEventListener('click',e=>{if(e.target.closest('[data-del]'))return;openPlanilla(c.dataset.id);}));
+    $('#cards').querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>delPlanilla(b.dataset.del)));
+  }catch(e){if(e.message!=='401')toast(e.message);}
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+async function delPlanilla(id){
+  if(!confirm('¿Borrar esta planilla? No se puede deshacer.'))return;
+  try{await api('/api/planillas/'+id,{method:'DELETE'});toast('Planilla borrada');loadList();}catch(e){toast(e.message);}
+}
+
+/* ---------- modal nueva ---------- */
+function fillMonthSelect(sel,val){sel.innerHTML=MONTHS.map((m,i)=>`<option value="${i+1}" ${i+1===val?'selected':''}>${m[0].toUpperCase()+m.slice(1)}</option>`).join('');}
+$('#newBtn').addEventListener('click',()=>{const now=new Date();$('#mName').value='';fillMonthSelect($('#mMonth'),now.getMonth()+1);$('#mYear').value=now.getFullYear();$('#modal').classList.remove('hidden');$('#mName').focus();});
+$('#mCancel').addEventListener('click',()=>$('#modal').classList.add('hidden'));
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')$('#modal').classList.add('hidden');});
+$('#mCreate').addEventListener('click',async()=>{
+  const name=$('#mName').value.trim()||'Planilla sin nombre';
+  const year=+$('#mYear').value||2026,month=+$('#mMonth').value||1;
+  try{const d=await api('/api/planillas',{method:'POST',json:{name,year,month}});$('#modal').classList.add('hidden');openPlanilla(d.id);}
+  catch(e){toast(e.message);}
+});
+
+/* ---------- detalle ---------- */
+fillMonthSelect($('#pMonth'),10);
+function showList(){$('#detailView').classList.add('hidden');$('#listView').classList.remove('hidden');CUR=null;swapSel=null;loadList();}
+$('#backBtn').addEventListener('click',showList);
+
+async function openPlanilla(id){
+  try{
+    const d=await api('/api/planillas/'+id);
+    CUR=d;swapSel=null;
+    $('#listView').classList.add('hidden');$('#detailView').classList.remove('hidden');
+    $('#advisor').innerHTML='<div class="empty-adv">Haz clic en un día y elige «¿Puede librar?» o «¿Quién cubre?».</div>';
+    $('#pName').value=d.name||'';fillMonthSelect($('#pMonth'),d.month);$('#pYear').value=d.year;
+    renderDetail();
+  }catch(e){if(e.message!=='401')toast(e.message);}
+}
+$('#pName').addEventListener('change',()=>patchPlanilla({name:$('#pName').value.trim()}));
+$('#pMonth').addEventListener('change',()=>patchPlanilla({month:+$('#pMonth').value,year:+$('#pYear').value}));
+$('#pYear').addEventListener('change',()=>patchPlanilla({month:+$('#pMonth').value,year:+$('#pYear').value}));
+async function patchPlanilla(body){try{await api('/api/planillas/'+CUR.id,{method:'PATCH',json:body});await openPlanilla(CUR.id);toast('Guardado');}catch(e){toast(e.message);}}
+$('#delBtn').addEventListener('click',async()=>{if(!confirm('¿Borrar esta planilla?'))return;try{await api('/api/planillas/'+CUR.id,{method:'DELETE'});toast('Borrada');showList();}catch(e){toast(e.message);}});
+
+/* subir PDF */
+$('#pdfInput').addEventListener('change',async e=>{
+  const files=[...e.target.files];if(!files.length)return;
+  toast('Subiendo y leyendo…');
+  const form=new FormData();files.forEach(f=>form.append('files',f,f.name));
+  try{const d=await api('/api/planillas/'+CUR.id+'/import',{method:'POST',form});toast(`Importados ${d.imported} · total ${d.workers}`);openPlanilla(CUR.id);}
+  catch(err){toast('Error al subir: '+err.message);}
+  e.target.value='';
+});
+
+/* empleados */
+$('#addEmpBtn').addEventListener('click',async()=>{
+  const name=$('#newName').value.trim();if(!name){toast('Pon un nombre');return;}
+  try{await api('/api/planillas/'+CUR.id+'/worker',{method:'POST',json:{name,role:$('#newRole').value,hours:$('#newHours').value||null}});
+    $('#newName').value='';$('#newHours').value='';openPlanilla(CUR.id);}catch(e){toast(e.message);}
+});
+async function editWorker(wid,body){try{await api(`/api/planillas/${CUR.id}/worker/${wid}`,{method:'PATCH',json:body});const w=CUR.workers.find(x=>x.id===wid);if(w)Object.assign(w,body);toast('Guardado');}catch(e){toast(e.message);}}
+async function delWorker(wid){if(!confirm('¿Quitar a este empleado?'))return;try{await api(`/api/planillas/${CUR.id}/worker/${wid}`,{method:'DELETE'});openPlanilla(CUR.id);}catch(e){toast(e.message);}}
+
+function renderDetail(){
+  ID2NAME={};CUR.workers.forEach(w=>ID2NAME[w.id]=sur(w.name));
+  const a=CUR.audit;
+  const b=$('#banner');b.className='banner '+(a.compliant?'ok':'bad');
+  const nIss=a.checks.reduce((s,c)=>s+c.issues.length,0);
+  b.innerHTML=`<div class="badge">${a.compliant
+    ?'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+    :'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'}</div>
+    <div><div class="big">${a.compliant?'Cumple convenio':(CUR.workers.length?'No cumple':'Planilla vacía')}</div>
+    <div class="sub">${MONTHS[CUR.month-1]} ${CUR.year} · ${CUR.workers.length} empleado(s)${a.compliant||!CUR.workers.length?'':' · '+nIss+' incidencia(s)'}</div></div>`;
+
+  $('#empCount').textContent=`${CUR.workers.length} en total`;
+  $('#empBody').innerHTML=CUR.workers.map(w=>{
+    const rc=w.role==='enfermera'?'role-e':w.role==='auxiliar'?'role-a':'role-s';
+    return `<tr data-w="${w.id}">
+      <td><input type="text" value="${esc(w.name)}" data-f="name"></td>
+      <td><select data-f="role" class="${rc}">${Object.keys(ROLE_LABEL).map(r=>`<option value="${r}" ${w.role===r?'selected':''}>${ROLE_LABEL[r]}</option>`).join('')}</select></td>
+      <td><input type="number" value="${w.hours!=null?w.hours:''}" data-f="hours" placeholder="—"></td>
+      <td><button class="x" data-del>×</button></td></tr>`;
+  }).join('')||`<tr><td colspan="4" style="color:var(--text3);padding:14px">Sin empleados. Añade abajo o sube el PDF.</td></tr>`;
+  $('#empBody').querySelectorAll('tr[data-w]').forEach(tr=>{
+    const wid=tr.dataset.w;
+    tr.querySelector('[data-f="name"]').addEventListener('change',e=>editWorker(wid,{name:e.target.value.trim()}));
+    tr.querySelector('[data-f="role"]').addEventListener('change',e=>{editWorker(wid,{role:e.target.value});openPlanilla(CUR.id);});
+    tr.querySelector('[data-f="hours"]').addEventListener('change',e=>editWorker(wid,{hours:e.target.value===''?null:+e.target.value}));
+    tr.querySelector('[data-del]').addEventListener('click',()=>delWorker(wid));
+  });
+
+  $('#checks').innerHTML=a.checks.map(c=>{
+    const ok=c.status==='pass';
+    const iss=c.issues.slice(0,3).map(i=>`<div class="iss">· ${esc(i)}</div>`).join('');
+    return `<li><span class="ck ${ok?'ok':'bad'}">${ok?'✓':'✗'}</span><div><div>${esc(c.id)}${c.citation?` <span class="cite">· ${esc(c.citation)}</span>`:''}</div>${iss}</div></li>`;
+  }).join('')||'<li style="color:var(--text3)">Sin reglas evaluadas.</li>';
+
+  renderCal();
+}
+
+function renderCal(){
+  const D=CUR.days;
+  let head='<thead><tr><th class="wname"></th>';
+  for(let d=1;d<=D;d++){const dow=new Date(CUR.year,CUR.month-1,d).getDay();head+=`<th class="${dow===0?'sun':''}"><span class="dn">${d}</span>${DOW[dow]}</th>`;}
+  head+='</tr></thead>';
+  let rows='';
+  for(const w of CUR.workers){
+    rows+=`<tr><td class="wname" title="${esc(w.name)}">${esc(w.name)}</td>`;
+    for(let d=1;d<=D;d++){
+      const code=w.schedule[d-1]!=null?w.schedule[d-1]:'';
+      rows+=`<td class="cell ${codeClass(code)}" data-w="${w.id}" data-d="${d-1}" data-name="${esc(w.name)}" data-code="${esc(code)}">${esc(code)}</td>`;
+    }
+    rows+='</tr>';
+  }
+  $('#cal').innerHTML=head+'<tbody>'+rows+'</tbody>';
+  $('#cal').querySelectorAll('td.cell').forEach(td=>td.addEventListener('click',onCell));
+}
+
+/* ---------- popover de celda: editar turno o preguntar ---------- */
+function onCell(ev){
+  closePop();
+  const td=ev.currentTarget,w=td.dataset.w,d=+td.dataset.d,name=td.dataset.name,code=td.dataset.code;
+  const pop=document.createElement('div');pop.className='pop';pop.id='pop';
+  const swapTxt=swapSel?`🔁 Cambiar con ${sur(swapSel.name)} (d.${swapSel.d+1})`:'🔁 Marcar para cambio';
+  pop.innerHTML=`<div class="ph">${esc(sur(name))} · día ${d+1} · ${esc(code||'—')}</div>
+    <div class="sec">Cambiar turno</div>
+    <div class="codegrid">${EDIT_CODES.map(c=>`<button data-code="${c}">${c}</button>`).join('')}</div>
+    <div class="sec">Preguntar al motor</div>
+    <button class="act" data-a="release">🆓 ¿Puede librar?</button>
+    <button class="act" data-a="cover">👥 ¿Quién cubre?</button>
+    <button class="act ${swapSel?'on':''}" data-a="swap">${swapTxt}</button>`;
+  document.body.appendChild(pop);
+  const r=td.getBoundingClientRect();
+  pop.style.top=Math.min(r.bottom+5,window.innerHeight-pop.offsetHeight-10)+'px';
+  pop.style.left=Math.max(8,Math.min(r.left,window.innerWidth-pop.offsetWidth-10))+'px';
+  pop.querySelectorAll('[data-code]').forEach(btn=>btn.addEventListener('click',()=>setCell(w,d,btn.dataset.code)));
+  pop.querySelectorAll('[data-a]').forEach(btn=>btn.addEventListener('click',()=>act(btn.dataset.a,{w,d,name,code})));
+}
+function closePop(){const p=$('#pop');if(p)p.remove();}
+document.addEventListener('click',ev=>{if(!ev.target.closest('.pop')&&!ev.target.closest('td.cell'))closePop();});
+document.addEventListener('keydown',ev=>{if(ev.key==='Escape')closePop();});
+
+async function setCell(wid,day,code){
+  closePop();
+  try{
+    await api('/api/planillas/'+CUR.id+'/cell',{method:'PUT',json:{worker:wid,day,code}});
+    const w=CUR.workers.find(x=>x.id===wid);if(w)w.schedule[day]=code;
+    // recargar para reauditar con el cambio
+    openPlanilla(CUR.id);toast('Turno actualizado');
+  }catch(e){toast(e.message);}
+}
+
+async function act(a,c){
+  closePop();
+  try{
+    if(a==='swap'){
+      if(!swapSel){swapSel={w:c.w,d:c.d,name:c.name};markSel();toast('Marcado. Elige el 2.º día.');return;}
+      if(swapSel.w===c.w&&swapSel.d===c.d){swapSel=null;markSel();toast('Cancelado');return;}
+      const first=swapSel;swapSel=null;markSel();loading('Comprobando el cambio…');
+      const res=await api('/api/planillas/'+CUR.id+'/assistant/cambio',{method:'POST',json:{cell:{worker_a:first.w,day_a:first.d,worker_b:c.w,day_b:c.d}}});
+      showVerdict(`Cambio: ${sur(first.name)} (d.${first.d+1}) ↔ ${sur(c.name)} (d.${c.d+1})`,res);return;
+    }
+    if(a==='release'){loading('Comprobando convenio y cobertura…');
+      const res=await api('/api/planillas/'+CUR.id+'/assistant/librar',{method:'POST',json:{cell:{worker_id:c.w,day:c.d}}});
+      showVerdict(`¿${sur(c.name)} puede librar el día ${c.d+1}?`,res);}
+    if(a==='cover'){loading('Buscando quién cubre…');
+      const res=await api('/api/planillas/'+CUR.id+'/assistant/whoCovers',{method:'POST',json:{cell:{worker_id:c.w,day:c.d}}});
+      showCover(`Si falta ${sur(c.name)} el día ${c.d+1}`,res);}
+  }catch(e){if(e.message!=='401')$('#advisor').innerHTML='<div class="nores">No pude consultar el motor: '+esc(e.message)+'</div>';}
+}
+function markSel(){document.querySelectorAll('td.sel').forEach(t=>t.classList.remove('sel'));if(swapSel)document.querySelector(`td[data-w="${swapSel.w}"][data-d="${swapSel.d}"]`)?.classList.add('sel');}
+function loading(m){$('#advisor').innerHTML=`<div class="q-label">${m}</div><div class="spin"></div>`;}
+function showVerdict(q,res){
+  if(res.detail){$('#advisor').innerHTML=`<div class="nores">${esc(res.detail)}</div>`;return;}
+  const bl=(res.blockers||[]).map(b=>`<li>${esc(humanize(typeof b==='string'?b:(b.detail||JSON.stringify(b))))}</li>`).join('');
+  $('#advisor').innerHTML=`<div class="q-label">${esc(q)}</div><div class="verdict ${res.ok?'yes':'no'}">${res.ok?'✓ Sí':'✗ No'}</div><div class="reason">${esc(humanize(res.reason||''))}</div>${bl?`<ul class="blockers">${bl}</ul>`:''}`;
+}
+function showCover(q,res){
+  if(res.detail){$('#advisor').innerHTML=`<div class="nores">${esc(res.detail)}</div>`;return;}
+  const gaps=res.gaps||[];let html=`<div class="q-label">${esc(q)}</div>`;
+  if(!gaps.length)html+=`<div class="verdict yes">✓ Cubierto</div><div class="reason">No se rompe la cobertura mínima.</div>`;
+  for(const g of gaps){
+    const falta=g.need-g.have;
+    html+=`<div class="gap-h">⚠️ Faltan ${falta} en «${esc(g.shift)}»${g.skill?' / '+esc(g.skill):''} (día ${g.day+1})</div>`;
+    if(g.candidates&&g.candidates.length)html+='<ul class="cands">'+g.candidates.slice(0,6).map(c=>`<li><span class="av">${initials(c.name||'')}</span>${esc(sur(c.name||''))}</li>`).join('')+'</ul>';
+    else html+=`<div class="nores">Sin sustituto directo legal — reorganizar la planilla.</div>`;
+  }
+  $('#advisor').innerHTML=html;
+}
+
+/* ---------- arranque ---------- */
+if(TOKEN){showApp();loadList();}else showLogin();
+</script>
+</body>
+</html>
